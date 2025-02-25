@@ -1,0 +1,454 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StressON Engineering - Device Downtime</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Include Chart.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+
+
+
+<style>
+body {
+    margin: 0;
+    padding: 0;
+    background-image: linear-gradient(to right, #f0f4ff, #e6eef8);
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh; /* Ensure full height coverage */
+    font-family: 'Arial', sans-serif;
+}
+
+header {
+    background-color: #007BFF;
+    color: white;
+    text-align: center;
+    position: fixed;
+    top: 0;
+    width: 100%;
+    z-index: 1000;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    padding: 20px 0;
+}
+
+header h1 {
+    font-size: 2rem;
+    margin: 0;
+}
+
+@media (max-width: 768px) {
+    header h1 {
+        font-size: 1.5rem; /* Adjust for mobile */
+    }
+}
+
+.container {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap; /* Enables wrapping for smaller screens */
+    gap: 20px;
+    padding: 20px;
+    margin-top: 100px; /* Adjusted for fixed header */
+    margin-bottom: 100px; /* Added bottom margin to prevent overlap with footer */
+    justify-content: space-between;
+}
+
+@media (max-width: 768px) {
+    .container {
+        flex-direction: column; /* Stack vertically on mobile */
+        padding: 10px;
+        margin-bottom: 120px; /* Additional margin for smaller screens */
+    }
+}
+
+.downtime-box {
+    background-color: #ffffff;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    padding: 25px;
+    width: 30%; /* Default for larger screens */
+    text-align: center;
+    transition: transform 0.2s;
+}
+
+.downtime-box:hover {
+    transform: translateY(-5px);
+}
+
+@media (max-width: 768px) {
+    .downtime-box {
+        width: 100%; /* Full width on mobile */
+    }
+}
+
+footer {
+    background-color: #007BFF;
+    color: white;
+    text-align: center;
+    padding: 20px 0;
+    width: 100%;
+    position: fixed;
+    bottom: 0;
+}
+
+.back-button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    margin-top: 30px;
+    margin-bottom: 120px; /* Ensures space above footer */
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1.1em;
+    transition: background-color 0.3s;
+    font-weight: bold;
+    display: block;
+    text-align: center;
+}
+
+.back-button:hover {
+    background-color: #0069d9;
+}
+
+@media (max-width: 768px) {
+    .back-button {
+        padding: 10px 15px;
+    }
+}
+
+.combined-table-container {
+    margin-top: 25px;
+    text-align: center;
+    width: 60%;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+@media (max-width: 768px) {
+    .combined-table-container {
+        width: 100%;
+        padding: 0 10px;
+    }
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+th {
+    background-color: #007BFF;
+    color: white;
+    text-align: center;
+}
+
+td {
+    text-align: center;
+}
+
+.export-button {
+    background-color: #007bff;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    margin-top: 20px;
+    margin-bottom: 50px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9em;
+    transition: background-color 0.3s;
+    font-weight: bold;
+}
+
+.export-button:hover {
+    background-color: #0069d9;
+}
+
+</style>
+
+
+
+
+
+</head>
+
+<div style="overflow-x: auto; white-space: nowrap;">
+    <canvas id="chartId" width="800" height="400"></canvas>
+</div>
+
+<body>
+
+<header>
+    <h1>StressON Engineering</h1>
+</header>
+
+<h1>Device Downtime Overview</h1>
+
+<div class="container">
+    <!-- No Material Downtime -->
+    <div class="downtime-box">
+        <h2>No Material Downtime</h2>
+        <canvas class="chart" id="noMaterialDowntimeChart" width="150" height="150"></canvas>
+    </div>
+
+    <!-- Mold Defective Downtime -->
+    <div class="downtime-box">
+        <h2>Mold Defective Downtime</h2>
+        <canvas class="chart" id="moldDefectiveDowntimeChart" width="150" height="150"></canvas>
+    </div>
+
+    <!-- Maintenance Downtime -->
+    <div class="downtime-box">
+        <h2>Maintenance Downtime</h2>
+        <canvas class="chart" id="maintenanceDowntimeChart" width="150" height="150"></canvas>
+    </div>
+</div>
+
+<div class="combined-table-container">
+    <h2>Combined Downtime (All Categories)</h2>
+    <div style="max-height: 160px; overflow-y: auto;"> <!-- Wrapper for scroll -->
+        <table id="combinedDowntimeTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Total Downtime (Minutes)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Rows will be inserted here dynamically -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+
+<button class="back-button" onclick="window.location.href='main.html'">Back to Page</button>
+
+<button id="exportButton" class="back-button">Export to Excel</button>
+
+
+
+<footer>
+    <p>&copy; 2024 StressON Engineering. All rights reserved.</p>
+</footer>
+
+<script>
+// Firebase configuration
+const firebaseConfig = {
+       apiKey: "AIzaSyBUtpT41WDSPM2Vwd9ONkXrKQjSD1FgFJs",
+            authDomain: "customer-3-54cd9.firebaseapp.com",
+            databaseURL: "https://customer-3-54cd9-default-rtdb.firebaseio.com/",
+            projectId: "customer-3-54cd9",
+            storageBucket: "customer-3-54cd9.appspot.com",
+            messagingSenderId: "123456789",
+            appId: "1:123456789:web:123456789abcd"
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+function fetchDowntimeData(downtimeType, sampleData) {
+    const path = downtimeType;
+
+    return database.ref(path).once('value').then(snapshot => {
+        const data = snapshot.val();
+        let dateDurationMap = {};
+        let labels = [];
+        let durations = [];
+
+        if (data) {
+            for (const key in data) {
+                if (data.hasOwnProperty(key)) {
+                    const entry = data[key];
+                    if (entry.duration !== undefined && entry.timestamp) {
+                        const timestamp = entry.timestamp * 1000;
+                        const date = new Date(timestamp);
+                        if (!isNaN(date.getTime())) {
+                            const dateString = date.toLocaleDateString();
+                            if (!dateDurationMap[dateString]) {
+                                dateDurationMap[dateString] = 0;
+                            }
+                            dateDurationMap[dateString] += entry.duration;
+                        }
+                    }
+                }
+            }
+            labels = Object.keys(dateDurationMap);
+            durations = Object.values(dateDurationMap);
+        } else {
+            labels = sampleData.labels;
+            durations = sampleData.durations;
+        }
+        return { labels, durations };
+    });
+}
+
+// Sample data
+const sampleData = {
+    noMaterialDowntime: {
+        labels: ['01-10-2024', '02-10-2024', '03-10-2024', '05-10-2024'],
+        durations: [30, 45, 25, 50]
+    },
+    moldDefectiveDowntime: {
+        labels: ['01-10-2024', '02-10-2024', '03-10-2024', '05-10-2024'],
+        durations: [15, 20, 30, 10]
+    },
+    maintenanceDowntime: {
+        labels: ['01-10-2024', '02-10-2024', '03-10-2024', '05-10-2024'],
+        durations: [60, 70, 80, 40]
+    }
+};
+
+// Declare variables at a higher scope
+let combinedLabels = [];
+let noMaterial = {};
+let moldDefective = {};
+let maintenance = {};
+
+// Fetch data from Firebase for each downtime category
+Promise.all([
+    fetchDowntimeData('noMaterialDowntime', sampleData.noMaterialDowntime),
+    fetchDowntimeData('moldDefectiveDowntime', sampleData.moldDefectiveDowntime),
+    fetchDowntimeData('maintenanceDowntime', sampleData.maintenanceDowntime)
+]).then(values => {
+    noMaterial = values[0];
+    moldDefective = values[1];
+    maintenance = values[2];
+
+    // Initialize individual charts for each category
+    createChart('noMaterialDowntimeChart', noMaterial.labels, noMaterial.durations, 'No Material Downtime');
+    createChart('moldDefectiveDowntimeChart', moldDefective.labels, moldDefective.durations, 'Mold Defective Downtime');
+    createChart('maintenanceDowntimeChart', maintenance.labels, maintenance.durations, 'Maintenance Downtime');
+
+    // Combine and sum data for each date
+    const combinedLabelsSet = new Set([...noMaterial.labels, ...moldDefective.labels, ...maintenance.labels]);
+    combinedLabels = Array.from(combinedLabelsSet).sort();
+
+    const combinedData = combinedLabels.map(label => {
+        const noMaterialIndex = noMaterial.labels.indexOf(label);
+        const moldDefectiveIndex = moldDefective.labels.indexOf(label);
+        const maintenanceIndex = maintenance.labels.indexOf(label);
+
+        const noMaterialValue = noMaterialIndex !== -1 ? noMaterial.durations[noMaterialIndex] : 0;
+        const moldDefectiveValue = moldDefectiveIndex !== -1 ? moldDefective.durations[moldDefectiveIndex] : 0;
+        const maintenanceValue = maintenanceIndex !== -1 ? maintenance.durations[maintenanceIndex] : 0;
+
+        return noMaterialValue + moldDefectiveValue + maintenanceValue;
+    });
+
+    // Insert data into the table
+    const tableBody = document.querySelector('#combinedDowntimeTable tbody');
+    tableBody.innerHTML = '';  // Clear existing table rows
+
+    combinedLabels.forEach((label, index) => {
+        const totalDowntime = combinedData[index];
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${label}</td>
+            <td>${totalDowntime} minutes</td>
+        `;
+        tableBody.appendChild(row);
+    });
+});
+
+// Export to Excel Functionality
+document.getElementById('exportButton').addEventListener('click', function () {
+    const breakdownData = [];
+    combinedLabels.forEach((date, index) => {
+        const noMaterialIndex = noMaterial.labels.indexOf(date);
+        const moldDefectiveIndex = moldDefective.labels.indexOf(date);
+        const maintenanceIndex = maintenance.labels.indexOf(date);
+
+        const noMaterialValue = noMaterialIndex !== -1 ? noMaterial.durations[noMaterialIndex] : 0;
+        const moldDefectiveValue = moldDefectiveIndex !== -1 ? moldDefective.durations[moldDefectiveIndex] : 0;
+        const maintenanceValue = maintenanceIndex !== -1 ? maintenance.durations[maintenanceIndex] : 0;
+
+        breakdownData.push({
+            Date: date,
+            "No Material Downtime (min)": noMaterialValue,
+            "Mold Defective Downtime (min)": moldDefectiveValue,
+            "Maintenance Downtime (min)": maintenanceValue,
+            "Total Downtime (min)": noMaterialValue + moldDefectiveValue + maintenanceValue
+        });
+    });
+
+    // Create worksheet and workbook
+    const worksheet = XLSX.utils.json_to_sheet(breakdownData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Downtime Breakdown");
+
+    // Export to Excel
+    XLSX.writeFile(workbook, "Downtime_Breakdown.xlsx");
+});
+
+
+
+function createChart(chartId, labels, data, labelName) {
+    const ctx = document.getElementById(chartId).getContext('2d');
+    new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: labelName,
+                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1,
+                data: data
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                zoom: {
+                    pan: {
+                        enabled: true,
+                        mode: 'x', // Horizontal panning
+                        threshold: 0 // No minimal drag distance
+                    },
+                    zoom: {
+                        wheel: {
+                            enabled: true // Zoom with mouse wheel
+                        },
+                        pinch: {
+                            enabled: true // Zoom with touch gestures
+                        },
+                        mode: 'x' // Zoom horizontally
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    beginAtZero: true,
+                    ticks: {
+                        autoSkip: false // Show all labels
+                    }
+                },
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
+}
+
+
+
+
+
+</script>
+</body>
+</html>

@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poultry Farm Monitoring Dashboard</title>
+    
+    <!-- Firebase & Chart.js -->
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.17.0/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom@1.0.0"></script>
+    
+    <!-- JustGage for Dial Indicators -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/raphael/2.3.0/raphael.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/justgage/1.6.1/justgage.min.js"></script>
+
+
+    <style>
+        /* Universal Reset */
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        /* Body Styling */
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f5f5f5;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+        }
+
+        /* Header Styling */
+        .header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            background-color: #007BFF;
+            color: white;
+            font-size: 1.5rem; /* Smaller font for mobile */
+            text-align: center;
+            padding: 15px 0;
+            z-index: 1000;
+        }
+
+        /* Container Styling */
+        .container {
+            max-width: 1400px;
+            margin: 80px auto 60px auto;
+            padding: 20px; /* Reduced padding for mobile */
+            flex-grow: 1;
+        }
+
+        /* Section Styling */
+        .section {
+            background-color: white;
+            padding: 20px; /* Reduced padding for mobile */
+            margin-bottom: 20px; /* Reduced margin for mobile */
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Lighter shadow for mobile */
+            border-radius: 10px;
+        }
+
+        .section h2 {
+            font-size: 1.5rem; /* Smaller font for mobile */
+            color: #007BFF;
+            margin-bottom: 10px; /* Reduced margin for mobile */
+        }
+
+        /* Grid Layout for Live Values */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px; /* Reduced gap for mobile */
+        }
+
+        /* Info Box Styling */
+        .info-box {
+            padding: 20px; /* Reduced padding for mobile */
+            background-color: #fafafa;
+            border: 1px solid #ddd;
+            border-radius: 10px;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        .info-box:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2); /* Lighter shadow for mobile */
+        }
+
+/* Dial Indicator Styling */
+.dial-container {
+    display: flex;
+    justify-content: space-around;
+    margin-top: 20px;
+}
+
+.dial {
+    width: 250px; /* Increased from 150px */
+    height: 250px; /* Increased from 150px */
+}
+
+        /* Chart Container Styling */
+        .chart-container {
+            width: 100%;
+            height: 300px; /* Reduced height for mobile */
+            position: relative;
+            background-color: white;
+            padding: 20px; /* Reduced padding for mobile */
+            border-radius: 10px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); /* Lighter shadow for mobile */
+            margin-top: 20px; /* Reduced margin for mobile */
+            border: 2px solid #007BFF;
+            overflow-x: auto; /* Allow horizontal scrolling for charts */
+        }
+
+        /* Calendar Table Styling */
+        .calendar-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            overflow-x: auto; /* Allow horizontal scrolling for tables */
+            display: block; /* Make table scrollable */
+        }
+
+        .calendar-table th, .calendar-table td {
+            border: 1px solid #ddd;
+            padding: 10px;
+            text-align: center;
+        }
+
+        .calendar-table th {
+            background-color: #007BFF;
+            color: white;
+        }
+
+        .calendar-table td {
+            cursor: pointer;
+        }
+
+        .calendar-table td:hover {
+            background-color: #f1f1f1;
+        }
+
+        /* Footer Styling */
+        footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 15px 0; /* Reduced padding for mobile */
+            text-align: center;
+            background-color: #333;
+            color: white;
+            z-index: 1000;
+            font-size: 0.9rem; /* Smaller font for mobile */
+        }
+
+        /* Back Button Styling */
+        .back-button {
+            background-color: #007BFF;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1rem;
+            margin-bottom: 20px;
+        }
+
+        .back-button:hover {
+            background-color: #0056b3;
+        }
+
+        /* Calendar Controls Styling */
+        .calendar-controls {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .calendar-controls select {
+            padding: 10px;
+            font-size: 1rem;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+
+        /* Responsive Design for Mobile */
+        @media (max-width: 768px) {
+            .header {
+                font-size: 1.2rem; /* Smaller font for mobile */
+                padding: 10px 0; /* Reduced padding for mobile */
+            }
+
+            .container {
+                padding: 10px; /* Reduced padding for mobile */
+                margin-top: 60px; /* Adjusted margin for smaller header */
+            }
+
+            .section {
+                padding: 15px; /* Reduced padding for mobile */
+                margin-bottom: 15px; /* Reduced margin for mobile */
+            }
+
+            .section h2 {
+                font-size: 1.2rem; /* Smaller font for mobile */
+            }
+
+            .grid {
+                grid-template-columns: 1fr; /* Single column for mobile */
+                gap: 10px; /* Reduced gap for mobile */
+            }
+
+            .info-box {
+                padding: 15px; /* Reduced padding for mobile */
+            }
+
+            .dial-container {
+                flex-direction: column; /* Stack dials vertically on mobile */
+                align-items: center;
+            }
+
+             .dial {
+        width: 150px; /* Smaller size for mobile */
+        height: 150px;
+    }
+            .chart-container {
+                height: 250px; /* Reduced height for mobile */
+                padding: 15px; /* Reduced padding for mobile */
+            }
+
+            .calendar-controls {
+                flex-direction: column; /* Stack controls vertically */
+                gap: 10px; /* Add gap between controls */
+            }
+
+            .calendar-controls select {
+                width: 100%; /* Full width for mobile */
+            }
+
+            footer {
+                font-size: 0.8rem; /* Smaller font for mobile */
+                padding: 10px 0; /* Reduced padding for mobile */
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        Poultry Farm Monitoring Dashboard
+    </div>
+
+    <div class="container">
+        <!-- Back Button -->
+        <button class="back-button" onclick="goBack()">Back to Main Page</button>
+
+        <!-- Live Values Section -->
+        <div class="section">
+            <h2 id="liveDateTime"></h2>
+            <p id="latestDate" style="font-size: 20px; font-weight: bold; color: #007BFF;"></p>
+
+            <!-- Dial Indicators -->
+            <div class="dial-container">
+                <div id="temperatureDial" class="dial"></div>
+                <div id="humidityDial" class="dial"></div>
+                <div id="flowRateDial" class="dial"></div>
+            </div>
+
+            <div class="grid">
+                <div class="info-box">
+                    <strong>Temperature (°C)</strong>
+                    <div id="liveTemperature">N/A</div>
+                </div>
+                <div class="info-box">
+                    <strong>Humidity (%)</strong>
+                    <div id="liveHumidity">N/A</div>
+                </div>
+                <div class="info-box">
+                    <strong>Flow Rate (L/min)</strong>
+                    <div id="liveFlowRate">N/A</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Last Update Section -->
+        <div class="section">
+            <h2>Last Update</h2>
+            <div class="info-box">
+                <strong>Last Update (hours ago)</strong>
+                <div id="lastUpdateDisplay">N/A</div>
+            </div>
+        </div>
+
+        <!-- Charts Section -->
+        <div class="section">
+            <h2>Charts (Last 24 Hours)</h2>
+            <div class="chart-container">
+                <canvas id="temperatureChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="humidityChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="flowRateChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Calendar Section -->
+        <div class="section">
+            <h2>Calendar</h2>
+            <div class="calendar-controls">
+                <select id="monthSelect">
+                    <!-- Months will be populated dynamically -->
+                </select>
+                <select id="yearSelect">
+                    <!-- Years will be populated dynamically -->
+                </select>
+            </div>
+            <table class="calendar-table" id="calendarTable">
+                <thead>
+                    <tr>
+                        <th>Sun</th>
+                        <th>Mon</th>
+                        <th>Tue</th>
+                        <th>Wed</th>
+                        <th>Thu</th>
+                        <th>Fri</th>
+                        <th>Sat</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Calendar rows will be populated dynamically -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <footer>
+        Poultry Farm Monitoring System © 2024
+    </footer>
+
+    <script>
+        // Firebase configuration
+        var firebaseConfig = {
+            apiKey: "AIzaSyDzpPBsDGMK5kJu88el2R8-kAtzQWmw4HM",
+            authDomain: "weight-scale-w15.firebaseapp.com",
+            databaseURL: "https://weight-scale-w15-default-rtdb.firebaseio.com/",
+            projectId: "weight-scale-w15",
+            storageBucket: "weight-scale-w15.appspot.com",
+            messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Replace with your messagingSenderId
+            appId: "YOUR_APP_ID" // Replace with your appId
+        };
+
+        // Initialize Firebase
+        firebase.initializeApp(firebaseConfig);
+        var database = firebase.database();
+
+        // Initialize charts with zoom and pan functionality
+        var temperatureChart = createChart("temperatureChart", "Temperature (°C)", "rgba(255, 99, 132, 1)");
+        var humidityChart = createChart("humidityChart", "Humidity (%)", "rgba(54, 162, 235, 1)");
+        var flowRateChart = createChart("flowRateChart", "Flow Rate (L/min)", "rgba(75, 192, 192, 1)");
+
+     var temperatureDial = new JustGage({
+    id: "temperatureDial",
+    value: 0,
+    min: 0,
+    max: 50,
+    title: "Temperature (°C)",
+    label: "",
+    levelColors: ["#ff0000", "#00ff00"],
+    relativeGaugeSize: true,
+    width: 250, // Match the CSS width
+    height: 250 // Match the CSS height
+});
+
+var humidityDial = new JustGage({
+    id: "humidityDial",
+    value: 0,
+    min: 0,
+    max: 100,
+    title: "Humidity (%)",
+    label: "",
+    levelColors: ["#00ff00", "#0000ff"],
+    relativeGaugeSize: true,
+    width: 250, // Match the CSS width
+    height: 250 // Match the CSS height
+});
+
+var flowRateDial = new JustGage({
+    id: "flowRateDial",
+    value: 0,
+    min: 0,
+    max: 100,
+    title: "Flow Rate (L/min)",
+    label: "",
+    levelColors: ["#0000ff", "#ff00ff"],
+    relativeGaugeSize: true,
+    width: 250, // Match the CSS width
+    height: 250 // Match the CSS height
+});
+
+        // Function to create a chart with zoom and pan
+        function createChart(canvasId, label, borderColor) {
+            var ctx = document.getElementById(canvasId).getContext('2d');
+            return new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: label,
+                        data: [],
+                        borderColor: borderColor,
+                        backgroundColor: borderColor.replace(/[^,]+(?=\))/, '0.2'),
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        zoom: {
+                            zoom: {
+                                wheel: {
+                                    enabled: true, // Enable zooming with the mouse wheel
+                                },
+                                pinch: {
+                                    enabled: true // Enable pinch-to-zoom for touch devices
+                                },
+                                mode: 'x', // Zoom only on the x-axis
+                            },
+                            pan: {
+                                enabled: true, // Enable panning
+                                mode: 'x', // Pan only on the x-axis
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: 'Time',
+                                color: '#333',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            }
+                        },
+                        y: {
+                            display: true,
+                            title: {
+                                display: true,
+                                text: label,
+                                color: '#333',
+                                font: {
+                                    size: 14,
+                                    weight: 'bold'
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Function to monitor data from Firebase
+        function monitorData() {
+            var sensorRef = database.ref('poultryFarmData');
+            sensorRef.on('value', function(snapshot) {
+                var temperatureData = [];
+                var humidityData = [];
+                var flowRateData = [];
+                var timeLabels = [];
+                var latestTimestamp = null;
+
+                if (!snapshot.exists()) {
+                    // No data available, set default values
+                    document.getElementById("liveTemperature").innerText = "N/A";
+                    document.getElementById("liveHumidity").innerText = "N/A";
+                    document.getElementById("liveFlowRate").innerText = "N/A";
+                    document.getElementById("lastUpdateDisplay").innerText = "N/A";
+                    document.getElementById("latestDate").innerText = "N/A";
+                    return;
+                }
+
+                snapshot.forEach(function(childSnapshot) {
+                    var data = childSnapshot.val();
+                    if (!data.timestamp) return; // Skip if timestamp is missing
+
+                    var timestamp = new Date(data.timestamp * 1000); // Convert to date
+
+                    var hours = timestamp.getHours();
+                    var minutes = timestamp.getMinutes();
+                    var ampm = hours >= 12 ? "PM" : "AM";
+                    hours = hours % 12 || 12; // Convert 24-hour time to 12-hour format
+                    minutes = minutes < 10 ? "0" + minutes : minutes; // Ensure two-digit minutes
+                    var formattedTime = `${hours}:${minutes} ${ampm}`; // Final time format
+
+                    var dateString = timestamp.toLocaleDateString(); // Format date
+
+                    if (data.temperature !== undefined) temperatureData.push(data.temperature);
+                    if (data.humidity !== undefined) humidityData.push(data.humidity);
+                    if (data.flowRate !== undefined) flowRateData.push(data.flowRate);
+                    timeLabels.push(formattedTime);
+
+                    // Update live values with fallback
+                    document.getElementById("liveTemperature").innerText = data.temperature !== undefined ? data.temperature : "N/A";
+                    document.getElementById("liveHumidity").innerText = data.humidity !== undefined ? data.humidity : "N/A";
+                    document.getElementById("liveFlowRate").innerText = data.flowRate !== undefined ? data.flowRate : "N/A";
+
+                    // Update dial indicators
+                    temperatureDial.refresh(data.temperature || 0);
+                    humidityDial.refresh(data.humidity || 0);
+                    flowRateDial.refresh(data.flowRate || 0);
+
+                    // Update latest timestamp only if it's the most recent
+                    if (!latestTimestamp || timestamp > latestTimestamp) {
+                        latestTimestamp = timestamp;
+                    }
+                });
+
+                // Update charts
+                updateChart(temperatureChart, timeLabels, temperatureData);
+                updateChart(humidityChart, timeLabels, humidityData);
+                updateChart(flowRateChart, timeLabels, flowRateData);
+
+                // Display last update time and formatted date with time
+                if (latestTimestamp) {
+                    var hoursAgo = Math.floor((Date.now() - latestTimestamp) / (1000 * 60 * 60));
+                    document.getElementById("lastUpdateDisplay").innerText = hoursAgo + " hours ago";
+                    document.getElementById("latestDate").innerText = `Date: ${latestTimestamp.toLocaleDateString()} | Time: ${latestTimestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}`;
+                } else {
+                    document.getElementById("lastUpdateDisplay").innerText = "N/A";
+                    document.getElementById("latestDate").innerText = "N/A";
+                }
+            });
+        }
+
+        // Function to update a chart
+        function updateChart(chart, labels, data) {
+            chart.data.labels = labels;
+            chart.data.datasets[0].data = data;
+            chart.update();
+        }
+
+        // Function to initialize the calendar
+        function initializeCalendar() {
+            var monthSelect = document.getElementById("monthSelect");
+            var yearSelect = document.getElementById("yearSelect");
+            var calendarBody = document.querySelector("#calendarTable tbody");
+
+            // Populate months
+            var months = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            months.forEach((month, index) => {
+                var option = document.createElement("option");
+                option.value = index;
+                option.text = month;
+                monthSelect.appendChild(option);
+            });
+
+            // Populate years (e.g., from 2020 to 2030)
+            for (var year = 2020; year <= 2030; year++) {
+                var option = document.createElement("option");
+                option.value = year;
+                option.text = year;
+                yearSelect.appendChild(option);
+            }
+
+            // Set default to current month and year
+            var currentDate = new Date();
+            monthSelect.value = currentDate.getMonth();
+            yearSelect.value = currentDate.getFullYear();
+
+            // Render calendar
+            renderCalendar(currentDate.getMonth(), currentDate.getFullYear());
+
+            // Add event listeners for month and year changes
+            monthSelect.addEventListener("change", () => {
+                renderCalendar(monthSelect.value, yearSelect.value);
+            });
+            yearSelect.addEventListener("change", () => {
+                renderCalendar(monthSelect.value, yearSelect.value);
+            });
+        }
+
+        // Function to render the calendar
+        function renderCalendar(month, year) {
+            var calendarBody = document.querySelector("#calendarTable tbody");
+            var firstDay = new Date(year, month, 1);
+            var lastDay = new Date(year, month + 1, 0);
+            var startingDay = firstDay.getDay();
+
+            var html = "";
+            var day = 1;
+
+            for (var i = 0; i < 6; i++) {
+                html += "<tr>";
+                for (var j = 0; j < 7; j++) {
+                    if (i === 0 && j < startingDay) {
+                        html += "<td></td>";
+                    } else if (day > lastDay.getDate()) {
+                        html += "<td></td>";
+                    } else {
+                        html += `<td onclick="fetchDataForDate(${day}, ${month}, ${year})">${day}</td>`;
+                        day++;
+                    }
+                }
+                html += "</tr>";
+            }
+
+            calendarBody.innerHTML = html;
+        }
+
+        // Function to fetch data for a specific date
+        function fetchDataForDate(day, month, year) {
+            var startTimestamp = new Date(year, month, day, 0, 0, 0).getTime() / 1000; // Start of the day
+            var endTimestamp = new Date(year, month, day, 23, 59, 59).getTime() / 1000; // End of the day
+
+            var sensorRef = database.ref('poultryFarmData').orderByChild('timestamp').startAt(startTimestamp).endAt(endTimestamp);
+
+            sensorRef.once('value', function(snapshot) {
+                var temperatureData = [];
+                var humidityData = [];
+                var flowRateData = [];
+                var timeLabels = [];
+
+                snapshot.forEach(function(childSnapshot) {
+                    var data = childSnapshot.val();
+                    var timestamp = new Date(data.timestamp * 1000);
+                    var timeString = timestamp.toLocaleTimeString();
+
+                    temperatureData.push(data.temperature);
+                    humidityData.push(data.humidity);
+                    flowRateData.push(data.flowRate);
+                    timeLabels.push(timeString);
+                });
+
+                // Update charts with new data
+                updateChart(temperatureChart, timeLabels, temperatureData);
+                updateChart(humidityChart, timeLabels, humidityData);
+                updateChart(flowRateChart, timeLabels, flowRateData);
+            });
+        }
+
+        // Function to go back to the main page
+        function goBack() {
+            window.location.href = "main.html";
+        }
+
+        // Initialize
+        monitorData();
+        initializeCalendar();
+    </script>
+</body>
+</html>
