@@ -3,227 +3,187 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>StressON Engineering - Device Downtime</title>
+    <title>Poultry Data Monitoring</title>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
     <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script> <!-- Include Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        /* Your existing CSS styles */
+        body {
+            margin: 0;
+            padding: 0;
+            background-image: linear-gradient(to right, #f0f4ff, #e6eef8);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            font-family: 'Arial', sans-serif;
+        }
 
-<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+        header {
+            background-color: #007BFF;
+            color: white;
+            text-align: center;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px 0;
+        }
 
+        header h1 {
+            font-size: 2rem;
+            margin: 0;
+        }
 
+        .container {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 20px;
+            margin-top: 100px;
+            margin-bottom: 100px;
+            justify-content: space-between;
+        }
 
-<style>
-body {
-    margin: 0;
-    padding: 0;
-    background-image: linear-gradient(to right, #f0f4ff, #e6eef8);
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh; /* Ensure full height coverage */
-    font-family: 'Arial', sans-serif;
-}
+        .data-box {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            width: 45%;
+            text-align: center;
+            transition: transform 0.2s;
+        }
 
-header {
-    background-color: #007BFF;
-    color: white;
-    text-align: center;
-    position: fixed;
-    top: 0;
-    width: 100%;
-    z-index: 1000;
-    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-    padding: 20px 0;
-}
-
-header h1 {
-    font-size: 2rem;
-    margin: 0;
-}
-
-@media (max-width: 768px) {
-    header h1 {
-        font-size: 1.5rem; /* Adjust for mobile */
-    }
-}
-
-.container {
-    display: flex;
-    flex-direction: row;
-    flex-wrap: wrap; /* Enables wrapping for smaller screens */
-    gap: 20px;
-    padding: 20px;
-    margin-top: 100px; /* Adjusted for fixed header */
-    margin-bottom: 100px; /* Added bottom margin to prevent overlap with footer */
-    justify-content: space-between;
-}
-
-@media (max-width: 768px) {
-    .container {
-        flex-direction: column; /* Stack vertically on mobile */
-        padding: 10px;
-        margin-bottom: 120px; /* Additional margin for smaller screens */
-    }
-}
-
-.downtime-box {
-    background-color: #ffffff;
-    border-radius: 12px;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-    padding: 25px;
-    width: 30%; /* Default for larger screens */
-    text-align: center;
-    transition: transform 0.2s;
-}
-
-.downtime-box:hover {
-    transform: translateY(-5px);
-}
-
-@media (max-width: 768px) {
-    .downtime-box {
-        width: 100%; /* Full width on mobile */
-    }
-}
-
-footer {
-    background-color: #007BFF;
-    color: white;
-    text-align: center;
-    padding: 20px 0;
-    width: 100%;
-    position: fixed;
-    bottom: 0;
-}
-
-.back-button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    margin-top: 30px;
-    margin-bottom: 120px; /* Ensures space above footer */
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 1.1em;
-    transition: background-color 0.3s;
-    font-weight: bold;
-    display: block;
-    text-align: center;
-}
-
-.back-button:hover {
-    background-color: #0069d9;
-}
-
-@media (max-width: 768px) {
-    .back-button {
-        padding: 10px 15px;
-    }
-}
-
-.combined-table-container {
-    margin-top: 25px;
-    text-align: center;
-    width: 60%;
-    margin-left: auto;
-    margin-right: auto;
-}
-
-@media (max-width: 768px) {
-    .combined-table-container {
-        width: 100%;
-        padding: 0 10px;
-    }
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-}
-
-th, td {
-    border: 1px solid #ddd;
-    padding: 8px;
-}
-
-th {
-    background-color: #007BFF;
-    color: white;
-    text-align: center;
-}
-
-td {
-    text-align: center;
-}
-
-.export-button {
-    background-color: #007bff;
-    color: white;
-    border: none;
-    padding: 8px 16px;
-    margin-top: 20px;
-    margin-bottom: 50px;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.9em;
-    transition: background-color 0.3s;
-    font-weight: bold;
-}
-
-.export-button:hover {
-    background-color: #0069d9;
-}
-
-</style>
+        .data-box:hover {
+            transform: translateY(-5px);
+        }
 
 
 
+        .back-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #007BFF;
+            color: white;
+            padding: 10px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+            font-size: 1rem;
+            z-index: 1000;
+        }
 
+        .back-button:hover {
+            background-color: #0056b3;
+        }
 
+        .table-container {
+            margin-top: 25px;
+            text-align: center;
+            width: 80%; /* Increased width */
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 12px; /* Increased padding */
+            font-size: 1.1em; /* Increased font size */
+        }
+
+        th {
+            background-color: #007BFF;
+            color: white;
+            text-align: center;
+        }
+
+        td {
+            text-align: center;
+        }
+
+        .export-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px; /* Increased padding */
+            margin-top: 20px;
+            margin-bottom: 50px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em; /* Adjusted font size */
+            transition: background-color 0.3s;
+            font-weight: bold;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .export-button:hover {
+            background-color: #0069d9;
+        }
+
+        .calendar-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 20px;
+        }
+
+        .calendar-container input {
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            font-size: 1em;
+        }
+    </style>
 </head>
-
-<div style="overflow-x: auto; white-space: nowrap;">
-    <canvas id="chartId" width="800" height="400"></canvas>
-</div>
-
 <body>
 
 <header>
-    <h1>StressON Engineering</h1>
+    <h1>Poultry Data Monitoring</h1>
 </header>
 
-<h1>Device Downtime Overview</h1>
-
 <div class="container">
-    <!-- No Material Downtime -->
-    <div class="downtime-box">
-        <h2>No Material Downtime</h2>
-        <canvas class="chart" id="noMaterialDowntimeChart" width="150" height="150"></canvas>
+    <!-- Water Consumption Chart -->
+    <div class="data-box">
+        <h2>Total Water Consumption (Last 10 Days)</h2>
+        <canvas id="waterConsumptionChart" width="150" height="150"></canvas>
     </div>
 
-    <!-- Mold Defective Downtime -->
-    <div class="downtime-box">
-        <h2>Mold Defective Downtime</h2>
-        <canvas class="chart" id="moldDefectiveDowntimeChart" width="150" height="150"></canvas>
-    </div>
-
-    <!-- Maintenance Downtime -->
-    <div class="downtime-box">
-        <h2>Maintenance Downtime</h2>
-        <canvas class="chart" id="maintenanceDowntimeChart" width="150" height="150"></canvas>
+    <!-- Mortality Count Chart -->
+    <div class="data-box">
+        <h2>Mortality Count (Per Day)</h2>
+        <canvas id="mortalityCountChart" width="150" height="150"></canvas>
     </div>
 </div>
 
-<div class="combined-table-container">
-    <h2>Combined Downtime (All Categories)</h2>
-    <div style="max-height: 160px; overflow-y: auto;"> <!-- Wrapper for scroll -->
-        <table id="combinedDowntimeTable">
+<!-- Calendar for Date Selection -->
+<div class="calendar-container">
+    <input type="date" id="startDate" onchange="filterData()">
+    <input type="date" id="endDate" onchange="filterData()">
+</div>
+
+<!-- Water Consumption Table -->
+<div class="table-container">
+    <h2>Water Consumption Data (Per Day)</h2>
+    <div style="max-height: 300px; overflow-y: auto;"> <!-- Increased height -->
+        <table id="waterConsumptionTable">
             <thead>
                 <tr>
                     <th>Date</th>
-                    <th>Total Downtime (Minutes)</th>
+                    <th>Water Consumption (Liters)</th>
                 </tr>
             </thead>
             <tbody>
@@ -233,169 +193,160 @@ td {
     </div>
 </div>
 
+<!-- Mortality Count Table -->
+<div class="table-container">
+    <h2>Mortality Count Data (Per Day)</h2>
+    <div style="max-height: 300px; overflow-y: auto;"> <!-- Increased height -->
+        <table id="mortalityCountTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Mortality Count</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Rows will be inserted here dynamically -->
+            </tbody>
+        </table>
+    </div>
+</div>
 
 <button class="back-button" onclick="window.location.href='main.html'">Back to Page</button>
-
-<button id="exportButton" class="back-button">Export to Excel</button>
-
-
+<button id="exportButton" class="export-button">Export to Excel</button>
 
 <footer>
-    <p>&copy; 2024 StressON Engineering. All rights reserved.</p>
+    <p>&copy; 2024 Poultry Monitoring. All rights reserved.</p>
 </footer>
 
 <script>
 // Firebase configuration
 const firebaseConfig = {
-       apiKey: "AIzaSyBUtpT41WDSPM2Vwd9ONkXrKQjSD1FgFJs",
-            authDomain: "customer-3-54cd9.firebaseapp.com",
-            databaseURL: "https://customer-3-54cd9-default-rtdb.firebaseio.com/",
-            projectId: "customer-3-54cd9",
-            storageBucket: "customer-3-54cd9.appspot.com",
-            messagingSenderId: "123456789",
-            appId: "1:123456789:web:123456789abcd"
+    apiKey: "AIzaSyDzpPBsDGMK5kJu88el2R8-kAtzQWmw4HM",
+    authDomain: "weight-scale-w15.firebaseapp.com",
+    databaseURL: "https://weight-scale-w15-default-rtdb.firebaseio.com/",
+    projectId: "weight-scale-w15",
+    storageBucket: "weight-scale-w15.appspot.com",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Replace with your messagingSenderId
+    appId: "YOUR_APP_ID" // Replace with your appId
 };
 
 // Initialize Firebase
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-function fetchDowntimeData(downtimeType, sampleData) {
-    const path = downtimeType;
+let waterData = { labels: [], values: [] };
+let mortalityData = { labels: [], values: [] };
 
-    return database.ref(path).once('value').then(snapshot => {
+function fetchData() {
+    database.ref('poultryFarmData').once('value').then(snapshot => {
         const data = snapshot.val();
-        let dateDurationMap = {};
-        let labels = [];
-        let durations = [];
+        console.log("Fetched Data:", data); // Debugging
 
         if (data) {
-            for (const key in data) {
-                if (data.hasOwnProperty(key)) {
-                    const entry = data[key];
-                    if (entry.duration !== undefined && entry.timestamp) {
-                        const timestamp = entry.timestamp * 1000;
-                        const date = new Date(timestamp);
-                        if (!isNaN(date.getTime())) {
-                            const dateString = date.toLocaleDateString();
-                            if (!dateDurationMap[dateString]) {
-                                dateDurationMap[dateString] = 0;
-                            }
-                            dateDurationMap[dateString] += entry.duration;
-                        }
-                    }
+            let mortalityDataArray = [];
+            let waterDataArray = [];
+
+            // Convert the data object into an array
+            const dataArray = Object.values(data);
+
+            // Aggregate mortality count and water consumption per day
+            const mortalityPerDay = {};
+            const waterConsumptionPerDay = {};
+
+            dataArray.forEach(entry => {
+                const date = new Date(entry.timestamp * 1000).toLocaleDateString();
+
+                // Sum up mortality counts for the same day
+                if (!mortalityPerDay[date]) {
+                    mortalityPerDay[date] = 0;
                 }
-            }
-            labels = Object.keys(dateDurationMap);
-            durations = Object.values(dateDurationMap);
-        } else {
-            labels = sampleData.labels;
-            durations = sampleData.durations;
+                mortalityPerDay[date] += entry.mortalityCount;
+
+                // Sum up water consumption for the same day
+                if (!waterConsumptionPerDay[date]) {
+                    waterConsumptionPerDay[date] = 0;
+                }
+                waterConsumptionPerDay[date] += Math.round(entry.totalWaterConsumption);
+            });
+
+            // Prepare data for charts and tables
+            waterData.labels = Object.keys(waterConsumptionPerDay).slice(-10); // Last 10 days
+            waterData.values = Object.values(waterConsumptionPerDay).slice(-10);
+
+            mortalityData.labels = Object.keys(mortalityPerDay);
+            mortalityData.values = Object.values(mortalityPerDay);
+
+            console.log("Mortality Data:", mortalityData);
+            console.log("Water Data:", waterData);
         }
-        return { labels, durations };
+
+        updateChartsAndTables();
+    }).catch(error => {
+        console.error("Error fetching data:", error);
     });
 }
 
-// Sample data
-const sampleData = {
-    noMaterialDowntime: {
-        labels: ['01-10-2024', '02-10-2024', '03-10-2024', '05-10-2024'],
-        durations: [30, 45, 25, 50]
-    },
-    moldDefectiveDowntime: {
-        labels: ['01-10-2024', '02-10-2024', '03-10-2024', '05-10-2024'],
-        durations: [15, 20, 30, 10]
-    },
-    maintenanceDowntime: {
-        labels: ['01-10-2024', '02-10-2024', '03-10-2024', '05-10-2024'],
-        durations: [60, 70, 80, 40]
+// Filter data based on selected dates
+function filterData() {
+    const startDate = document.getElementById('startDate').value;
+    const endDate = document.getElementById('endDate').value;
+
+    if (!startDate || !endDate) {
+        alert("Please select both start and end dates.");
+        return;
     }
-};
 
-// Declare variables at a higher scope
-let combinedLabels = [];
-let noMaterial = {};
-let moldDefective = {};
-let maintenance = {};
+    const filteredWaterData = waterData.labels
+        .map((label, index) => ({ label, value: waterData.values[index] }))
+        .filter(entry => {
+            const entryDate = new Date(entry.label).toISOString().split('T')[0];
+            return entryDate >= startDate && entryDate <= endDate;
+        });
 
-// Fetch data from Firebase for each downtime category
-Promise.all([
-    fetchDowntimeData('noMaterialDowntime', sampleData.noMaterialDowntime),
-    fetchDowntimeData('moldDefectiveDowntime', sampleData.moldDefectiveDowntime),
-    fetchDowntimeData('maintenanceDowntime', sampleData.maintenanceDowntime)
-]).then(values => {
-    noMaterial = values[0];
-    moldDefective = values[1];
-    maintenance = values[2];
+    const filteredMortalityData = mortalityData.labels
+        .map((label, index) => ({ label, value: mortalityData.values[index] }))
+        .filter(entry => {
+            const entryDate = new Date(entry.label).toISOString().split('T')[0];
+            return entryDate >= startDate && entryDate <= endDate;
+        });
 
-    // Initialize individual charts for each category
-    createChart('noMaterialDowntimeChart', noMaterial.labels, noMaterial.durations, 'No Material Downtime');
-    createChart('moldDefectiveDowntimeChart', moldDefective.labels, moldDefective.durations, 'Mold Defective Downtime');
-    createChart('maintenanceDowntimeChart', maintenance.labels, maintenance.durations, 'Maintenance Downtime');
+    updateChartsAndTables(filteredWaterData, filteredMortalityData);
+}
 
-    // Combine and sum data for each date
-    const combinedLabelsSet = new Set([...noMaterial.labels, ...moldDefective.labels, ...maintenance.labels]);
-    combinedLabels = Array.from(combinedLabelsSet).sort();
+// Update charts and tables with filtered data
+function updateChartsAndTables(waterDataFiltered = waterData, mortalityDataFiltered = mortalityData) {
+    // Update Water Consumption Chart
+    createChart('waterConsumptionChart', waterDataFiltered.labels, waterDataFiltered.values, 'Water Consumption (Liters)');
 
-    const combinedData = combinedLabels.map(label => {
-        const noMaterialIndex = noMaterial.labels.indexOf(label);
-        const moldDefectiveIndex = moldDefective.labels.indexOf(label);
-        const maintenanceIndex = maintenance.labels.indexOf(label);
+    // Update Mortality Count Chart
+    createChart('mortalityCountChart', mortalityDataFiltered.labels, mortalityDataFiltered.values, 'Mortality Count');
 
-        const noMaterialValue = noMaterialIndex !== -1 ? noMaterial.durations[noMaterialIndex] : 0;
-        const moldDefectiveValue = moldDefectiveIndex !== -1 ? moldDefective.durations[moldDefectiveIndex] : 0;
-        const maintenanceValue = maintenanceIndex !== -1 ? maintenance.durations[maintenanceIndex] : 0;
-
-        return noMaterialValue + moldDefectiveValue + maintenanceValue;
-    });
-
-    // Insert data into the table
-    const tableBody = document.querySelector('#combinedDowntimeTable tbody');
-    tableBody.innerHTML = '';  // Clear existing table rows
-
-    combinedLabels.forEach((label, index) => {
-        const totalDowntime = combinedData[index];
+    // Update Water Consumption Table
+    const waterTableBody = document.querySelector('#waterConsumptionTable tbody');
+    waterTableBody.innerHTML = '';
+    waterDataFiltered.labels.forEach((label, index) => {
         const row = document.createElement('tr');
         row.innerHTML = `
             <td>${label}</td>
-            <td>${totalDowntime} minutes</td>
+            <td>${waterDataFiltered.values[index]}</td>
         `;
-        tableBody.appendChild(row);
-    });
-});
-
-// Export to Excel Functionality
-document.getElementById('exportButton').addEventListener('click', function () {
-    const breakdownData = [];
-    combinedLabels.forEach((date, index) => {
-        const noMaterialIndex = noMaterial.labels.indexOf(date);
-        const moldDefectiveIndex = moldDefective.labels.indexOf(date);
-        const maintenanceIndex = maintenance.labels.indexOf(date);
-
-        const noMaterialValue = noMaterialIndex !== -1 ? noMaterial.durations[noMaterialIndex] : 0;
-        const moldDefectiveValue = moldDefectiveIndex !== -1 ? moldDefective.durations[moldDefectiveIndex] : 0;
-        const maintenanceValue = maintenanceIndex !== -1 ? maintenance.durations[maintenanceIndex] : 0;
-
-        breakdownData.push({
-            Date: date,
-            "No Material Downtime (min)": noMaterialValue,
-            "Mold Defective Downtime (min)": moldDefectiveValue,
-            "Maintenance Downtime (min)": maintenanceValue,
-            "Total Downtime (min)": noMaterialValue + moldDefectiveValue + maintenanceValue
-        });
+        waterTableBody.appendChild(row);
     });
 
-    // Create worksheet and workbook
-    const worksheet = XLSX.utils.json_to_sheet(breakdownData);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Downtime Breakdown");
+    // Update Mortality Count Table
+    const mortalityTableBody = document.querySelector('#mortalityCountTable tbody');
+    mortalityTableBody.innerHTML = '';
+    mortalityDataFiltered.labels.forEach((label, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${label}</td>
+            <td>${mortalityDataFiltered.values[index]}</td>
+        `;
+        mortalityTableBody.appendChild(row);
+    });
+}
 
-    // Export to Excel
-    XLSX.writeFile(workbook, "Downtime_Breakdown.xlsx");
-});
-
-
-
+// Create a chart
 function createChart(chartId, labels, data, labelName) {
     const ctx = document.getElementById(chartId).getContext('2d');
     new Chart(ctx, {
@@ -412,43 +363,39 @@ function createChart(chartId, labels, data, labelName) {
         },
         options: {
             responsive: true,
-            plugins: {
-                zoom: {
-                    pan: {
-                        enabled: true,
-                        mode: 'x', // Horizontal panning
-                        threshold: 0 // No minimal drag distance
-                    },
-                    zoom: {
-                        wheel: {
-                            enabled: true // Zoom with mouse wheel
-                        },
-                        pinch: {
-                            enabled: true // Zoom with touch gestures
-                        },
-                        mode: 'x' // Zoom horizontally
-                    }
-                }
-            },
             scales: {
-                x: {
-                    beginAtZero: true,
-                    ticks: {
-                        autoSkip: false // Show all labels
-                    }
-                },
-                y: {
-                    beginAtZero: true
-                }
+                x: { beginAtZero: true },
+                y: { beginAtZero: true }
             }
         }
     });
 }
 
+// Export to Excel
+document.getElementById('exportButton').addEventListener('click', function () {
+    const waterDataExport = waterData.labels.map((label, index) => ({
+        Date: label,
+        "Water Consumption (Liters)": waterData.values[index]
+    }));
 
+    const mortalityDataExport = mortalityData.labels.map((label, index) => ({
+        Date: label,
+        "Mortality Count": mortalityData.values[index]
+    }));
 
+    const combinedData = waterDataExport.map((water, index) => ({
+        ...water,
+        "Mortality Count": mortalityDataExport[index]["Mortality Count"]
+    }));
 
+    const worksheet = XLSX.utils.json_to_sheet(combinedData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Poultry Data");
+    XLSX.writeFile(workbook, "Poultry_Data.xlsx");
+});
 
+// Initial fetch
+fetchData();
 </script>
 </body>
 </html>
