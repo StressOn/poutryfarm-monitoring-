@@ -33,21 +33,19 @@
             font-size: 28px;
         }
         .container {
-            display: flex;
-            justify-content: center;
-            align-items: flex-start;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
-            flex-wrap: wrap;
             max-width: 1200px;
             margin: 40px auto;
             flex-grow: 1; /* Allow the container to grow */
-            padding-bottom: 80px; /* Space for fixed footer */
+            padding: 20px;
+            padding-bottom: 120px; /* Space for fixed footer and logout button */
         }
         .device-card {
             border-radius: 10px;
             box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
             padding: 20px;
-            width: 200px;
             text-align: center;
             color: white;
             transition: transform 0.3s ease;
@@ -81,24 +79,33 @@
         .downtime-button:hover {
             background-color: #c82333;
         }
+        .logout-container {
+            text-align: center;
+            margin-top: 20px;
+            padding-bottom: 80px; /* Space for fixed footer */
+        }
         .logout-button {
             background-color: #FFC107;
             padding: 10px 20px;
             font-size: 16px;
             font-weight: bold;
-            margin-top: 20px;
+            border: none;
+            border-radius: 5px;
+            color: white;
+            cursor: pointer;
+            transition: background-color 0.3s ease;
         }
         .logout-button:hover {
             background-color: #e0a800;
         }
         /* Unique colors for each card */
-        .device-card:nth-child(2) {
+        .device-card:nth-child(1) {
             background-color: #FF6347;
         }
-        .device-card:nth-child(3) {
+        .device-card:nth-child(2) {
             background-color: #28A745;
         }
-        .device-card:nth-child(4) {
+        .device-card:nth-child(3) {
             background-color: #17A2B8;
         }
         /* Footer styles */
@@ -124,15 +131,13 @@
                 margin-top: 60px;
             }
             .container {
-                flex-direction: column;
-                align-items: center;
+                grid-template-columns: 1fr; /* Stack cards vertically on mobile */
                 gap: 15px;
                 margin: 20px auto;
-                padding-bottom: 60px;
+                padding-bottom: 100px;
             }
             .device-card {
-                width: 90%;
-                max-width: 300px;
+                width: 100%;
                 padding: 15px;
             }
             .device-card h2 {
@@ -158,25 +163,27 @@
 <h1>Control Dashboard Panel</h1>
 
 <div class="container">
-   <button id="logoutButton" class="button logout-button">Logout</button>
-
     <div class="device-card">
         <h2>Device 1</h2>
         <a href="d1monitoring.html" class="button">Monitoring</a>
-        <a href="d1mortality.html" class="button downtime-button">Mortality</a>
+        <a href="d1mortality.html" class="button downtime-button">Reports</a>
+        <a href="Anlysis.html" class="button downtime-button">Analysis</a>
     </div>
 
     <div class="device-card">
         <h2>Device 2</h2>
         <a href="d2monitoring.html" class="button">Monitoring</a>
-        <a href="d2mortality.html" class="button downtime-button">Mortality</a>
     </div>
 
     <div class="device-card">
         <h2>Device 3</h2>
         <a href="d3monitoring.html" class="button">Monitoring</a>
-        <a href="d3mortality.html" class="button downtime-button">Mortality</a>
     </div>
+</div>
+
+<!-- Logout Button Container -->
+<div class="logout-container">
+    <button id="logoutButton" class="logout-button">Logout</button>
 </div>
 
 <footer>
