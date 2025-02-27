@@ -1,0 +1,675 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Poultry Data Monitoring</title>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            background-image: linear-gradient(to right, #f0f4ff, #e6eef8);
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            font-family: 'Arial', sans-serif;
+        }
+
+        header {
+            background-color: #007BFF;
+            color: white;
+            text-align: center;
+            position: fixed;
+            top: 0;
+            width: 100%;
+            z-index: 1000;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px 0;
+        }
+
+        header h1 {
+            font-size: 2.5rem;
+            margin: 0;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: row;
+            flex-wrap: wrap;
+            gap: 20px;
+            padding: 20px;
+            margin-top: 100px;
+            margin-bottom: 100px;
+            justify-content: space-between;
+        }
+
+        .data-box {
+            background-color: #ffffff;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            padding: 25px;
+            width: 45%;
+            text-align: center;
+            transition: transform 0.2s;
+        }
+
+        .data-box:hover {
+            transform: translateY(-5px);
+        }
+
+        .back-button {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: #007BFF;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 50px;
+            text-decoration: none;
+            font-size: 1.2rem;
+            z-index: 1000;
+            transition: background-color 0.3s;
+        }
+
+        .back-button:hover {
+            background-color: #0056b3;
+        }
+
+        .table-container {
+            margin-top: 25px;
+            text-align: center;
+            width: 100%;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        table {
+            width: 90%;
+            border-collapse: collapse;
+            margin-top: 20px;
+            margin-left: auto;
+            margin-right: auto;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+
+        th, td {
+            border: 1px solid #ddd;
+            padding: 15px;
+            font-size: 1.2em;
+        }
+
+        th {
+            background-color: #007BFF;
+            color: white;
+            text-align: center;
+        }
+
+        td {
+            text-align: center;
+        }
+
+        .export-button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            margin-top: 30px;
+            margin-bottom: 50px;
+            border-radius: 50px;
+            cursor: pointer;
+            font-size: 1.2em;
+            transition: background-color 0.3s;
+            font-weight: bold;
+            display: block;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        .export-button:hover {
+            background-color: #0069d9;
+        }
+
+        .input-container {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-top: 30px;
+            flex-wrap: wrap;
+        }
+
+        .input-container input {
+            padding: 15px;
+            border-radius: 50px;
+            border: 1px solid #ddd;
+            font-size: 1.2em;
+            width: 250px;
+            text-align: center;
+        }
+
+        .input-container button {
+            padding: 15px 30px;
+            border-radius: 50px;
+            border: none;
+            background-color: #007BFF;
+            color: white;
+            font-size: 1.2em;
+            cursor: pointer;
+            transition: background-color 0.3s;
+        }
+
+        .input-container button:hover {
+            background-color: #0056b3;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .data-box {
+                width: 90%;
+            }
+
+            .input-container {
+                flex-direction: column;
+                align-items: center;
+            }
+
+            .input-container input, .input-container button {
+                width: 80%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<header>
+    <h1>Poultry Data Monitoring</h1>
+</header>
+
+<div class="container">
+    <!-- Water Consumption Chart -->
+    <div class="data-box">
+        <h2>Total Water Consumption</h2>
+        <canvas id="waterConsumptionChart" width="150" height="150"></canvas>
+    </div>
+
+    <!-- Feed Intake Chart -->
+    <div class="data-box">
+        <h2>Feed Intake</h2>
+        <canvas id="feedIntakeChart" width="150" height="150"></canvas>
+    </div>
+
+    <!-- Mortality Count Chart -->
+    <div class="data-box">
+        <h2>Mortality Count</h2>
+        <canvas id="mortalityCountChart" width="150" height="150"></canvas>
+    </div>
+</div>
+
+<!-- Input Boxes for Date and Number of Chicks -->
+<div class="input-container">
+    <input type="date" id="startDate" placeholder="Chicken Enter Date">
+    <input type="number" id="numChicks" placeholder="Number of Chicks">
+    <input type="number" id="balanceChicks" placeholder="Balance Chicks" readonly>
+    <button id="enterButton">Enter</button>
+</div>
+
+<!-- Water Consumption Table -->
+<div class="table-container">
+    <h2>Water Consumption Data</h2>
+    <div style="max-height: 300px; overflow-y: auto;">
+        <table id="waterConsumptionTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Actual Water Consumption (Liters)</th>
+                    <th>Standard Water Consumption (Liters)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Rows will be inserted here dynamically -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Feed Intake Table -->
+<div class="table-container">
+    <h2>Feed Intake Data</h2>
+    <div style="max-height: 300px; overflow-y: auto;">
+        <table id="feedIntakeTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Actual Feed Intake (kg)</th>
+                    <th>Standard Feed Intake (kg)</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Rows will be inserted here dynamically -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Mortality Count Table -->
+<div class="table-container">
+    <h2>Mortality Count Data</h2>
+    <div style="max-height: 300px; overflow-y: auto;">
+        <table id="mortalityCountTable">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Mortality Count</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Rows will be inserted here dynamically -->
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<button class="back-button" onclick="window.location.href='main.html'">Back to Page</button>
+<button id="exportButton" class="export-button">Export to Excel</button>
+
+<footer>
+    <p>&copy; 2024 Poultry Monitoring. All rights reserved.</p>
+</footer>
+
+<script>
+// Firebase configuration
+const firebaseConfig = {
+    apiKey: "AIzaSyDzpPBsDGMK5kJu88el2R8-kAtzQWmw4HM",
+    authDomain: "weight-scale-w15.firebaseapp.com",
+    databaseURL: "https://weight-scale-w15-default-rtdb.firebaseio.com/",
+    projectId: "weight-scale-w15",
+    storageBucket: "weight-scale-w15.appspot.com",
+    messagingSenderId: "YOUR_MESSAGING_SENDER_ID", // Replace with your messagingSenderId
+    appId: "YOUR_APP_ID" // Replace with your appId
+};
+
+// Initialize Firebase
+firebase.initializeApp(firebaseConfig);
+const database = firebase.database();
+
+// Declare chart instances globally (only once)
+let waterChartInstance = null;
+let feedChartInstance = null;
+let mortalityChartInstance = null;
+
+// Standard values (per chick)
+const standardValues = {
+    water: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80],
+    feed: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80]
+};
+
+let waterData = { labels: [], values: [] };
+let feedData = { labels: [], values: [] };
+let mortalityData = { labels: [], values: [] };
+
+// Function to create or update a chart
+function createChart(chartId, labels, data, labelName, standardData) {
+    const ctx = document.getElementById(chartId).getContext('2d');
+
+    // Destroy the existing chart instance if it exists
+    if (chartId === 'waterConsumptionChart' && waterChartInstance) {
+        waterChartInstance.destroy();
+    } else if (chartId === 'feedIntakeChart' && feedChartInstance) {
+        feedChartInstance.destroy();
+    } else if (chartId === 'mortalityCountChart' && mortalityChartInstance) {
+        mortalityChartInstance.destroy();
+    }
+
+    // Create a new chart instance
+    const newChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: labelName,
+                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1,
+                data: data
+            }, {
+                label: 'Standard ' + labelName,
+                backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1,
+                data: standardData
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: { beginAtZero: true },
+                y: { beginAtZero: true }
+            }
+        }
+    });
+
+    // Store the new chart instance
+    if (chartId === 'waterConsumptionChart') {
+        waterChartInstance = newChartInstance;
+    } else if (chartId === 'feedIntakeChart') {
+        feedChartInstance = newChartInstance;
+    } else if (chartId === 'mortalityCountChart') {
+        mortalityChartInstance = newChartInstance;
+    }
+}
+
+// Fetch data and update charts
+function fetchData() {
+    database.ref('poultryFarmData').once('value').then(snapshot => {
+        const data = snapshot.val();
+        console.log("Fetched Data:", data); // Debugging
+
+        if (data) {
+            // Convert the data object into an array
+            const dataArray = Object.values(data);
+
+            // Aggregate mortality count, water consumption, and feed intake per day
+            const mortalityPerDay = {};
+            const waterConsumptionPerDay = {};
+            const feedIntakePerDay = {};
+
+            dataArray.forEach(entry => {
+                const date = new Date(entry.timestamp * 1000).toLocaleDateString();
+
+                // Sum up mortality counts for the same day
+                if (!mortalityPerDay[date]) {
+                    mortalityPerDay[date] = 0;
+                }
+                mortalityPerDay[date] += entry.mortalityCount;
+
+                // Sum up water consumption for the same day
+                if (!waterConsumptionPerDay[date]) {
+                    waterConsumptionPerDay[date] = 0;
+                }
+                waterConsumptionPerDay[date] += entry.totalWaterConsumption;
+
+                // Sum up feed intake for the same day
+                if (!feedIntakePerDay[date]) {
+                    feedIntakePerDay[date] = 0;
+                }
+                feedIntakePerDay[date] += entry.feedIntake;
+            });
+
+            // Prepare data for charts and tables
+            waterData.labels = Object.keys(waterConsumptionPerDay);
+            waterData.values = Object.values(waterConsumptionPerDay);
+
+            feedData.labels = Object.keys(feedIntakePerDay);
+            feedData.values = Object.values(feedIntakePerDay);
+
+            mortalityData.labels = Object.keys(mortalityPerDay);
+            mortalityData.values = Object.values(mortalityPerDay);
+
+            console.log("Mortality Data:", mortalityData);
+            console.log("Water Data:", waterData);
+            console.log("Feed Data:", feedData);
+        }
+
+        updateChartsAndTables();
+    }).catch(error => {
+        console.error("Error fetching data:", error);
+    });
+}
+
+
+
+
+
+
+
+// Function to generate all dates from startDate to current date
+function generateDateRange(startDate) {
+    const dates = [];
+    const currentDate = new Date();
+    let currentDateObj = new Date(startDate);
+
+    while (currentDateObj <= currentDate) {
+        dates.push(currentDateObj.toLocaleDateString());
+        currentDateObj.setDate(currentDateObj.getDate() + 1); // Move to the next day
+    }
+
+    return dates;
+}
+
+// Update charts and tables with filtered data
+function updateChartsAndTables() {
+    // Get the start date
+    const startDate = document.getElementById('startDate').value;
+    if (!startDate) {
+        return;
+    }
+
+    const startDateObj = new Date(startDate);
+
+    // Get the number of chicks
+    const numChicks = document.getElementById('numChicks').value;
+    if (!numChicks) {
+        return;
+    }
+
+    // Generate all dates from startDate to current date
+    const allDates = generateDateRange(startDate);
+
+    // Initialize data for all dates
+    const filteredWaterData = {
+        labels: allDates,
+        values: new Array(allDates.length).fill(0) // Fill with 0 initially
+    };
+    const filteredFeedData = {
+        labels: allDates,
+        values: new Array(allDates.length).fill(0) // Fill with 0 initially
+    };
+    const filteredMortalityData = {
+        labels: allDates,
+        values: new Array(allDates.length).fill(0) // Fill with 0 initially
+    };
+
+    // Fill data from Firebase
+    waterData.labels.forEach((label, index) => {
+        const dateIndex = allDates.indexOf(label);
+        if (dateIndex !== -1) {
+            filteredWaterData.values[dateIndex] = waterData.values[index] / numChicks; // Actual per chick
+        }
+    });
+
+    feedData.labels.forEach((label, index) => {
+        const dateIndex = allDates.indexOf(label);
+        if (dateIndex !== -1) {
+            filteredFeedData.values[dateIndex] = feedData.values[index] / numChicks; // Actual per chick
+        }
+    });
+
+    mortalityData.labels.forEach((label, index) => {
+        const dateIndex = allDates.indexOf(label);
+        if (dateIndex !== -1) {
+            filteredMortalityData.values[dateIndex] = mortalityData.values[index];
+        }
+    });
+
+    // Calculate standard water and feed consumption
+    const days = allDates.map((label, index) => index + 1); // Days since startDate
+    const standardWater = days.map(day => standardValues.water[day - 1]); // Standard per chick
+    const standardFeed = days.map(day => standardValues.feed[day - 1]); // Standard per chick
+
+    // Update Water Consumption Chart
+    createChart('waterConsumptionChart', filteredWaterData.labels, filteredWaterData.values, 'Water Consumption (Liters)', standardWater);
+
+    // Update Feed Intake Chart
+    createChart('feedIntakeChart', filteredFeedData.labels, filteredFeedData.values, 'Feed Intake (kg)', standardFeed);
+
+    // Update Mortality Count Chart
+    createChart('mortalityCountChart', filteredMortalityData.labels, filteredMortalityData.values, 'Mortality Count');
+
+    // Update Water Consumption Table
+    const waterTableBody = document.querySelector('#waterConsumptionTable tbody');
+    waterTableBody.innerHTML = '';
+    filteredWaterData.labels.forEach((label, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${label}</td>
+            <td>${filteredWaterData.values[index].toFixed(2)}</td>
+            <td>${standardWater[index]}</td>
+        `;
+        waterTableBody.appendChild(row);
+    });
+
+    // Update Feed Intake Table
+    const feedTableBody = document.querySelector('#feedIntakeTable tbody');
+    feedTableBody.innerHTML = '';
+    filteredFeedData.labels.forEach((label, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${label}</td>
+            <td>${filteredFeedData.values[index].toFixed(2)}</td>
+            <td>${standardFeed[index]}</td>
+        `;
+        feedTableBody.appendChild(row);
+    });
+
+    // Update Mortality Count Table
+    const mortalityTableBody = document.querySelector('#mortalityCountTable tbody');
+    mortalityTableBody.innerHTML = '';
+    filteredMortalityData.labels.forEach((label, index) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+            <td>${label}</td>
+            <td>${filteredMortalityData.values[index]}</td>
+        `;
+        mortalityTableBody.appendChild(row);
+    });
+
+    // Calculate balance chicks
+    const totalMortality = filteredMortalityData.values.reduce((a, b) => a + b, 0);
+    const balanceChicks = numChicks - totalMortality;
+    document.getElementById('balanceChicks').value = balanceChicks;
+}
+
+
+
+
+// Initial fetch
+fetchData();
+
+// Event listener for the Enter button
+document.getElementById('enterButton').addEventListener('click', function () {
+    updateChartsAndTables();
+});
+
+// Event listener for the number of chicks input
+document.getElementById('numChicks').addEventListener('input', function () {
+    updateChartsAndTables();
+});
+
+
+// Function to create or update a chart
+function createChart(chartId, labels, data, labelName, standardData) {
+    const ctx = document.getElementById(chartId).getContext('2d');
+
+    // Destroy the existing chart instance if it exists
+    if (chartId === 'waterConsumptionChart' && waterChartInstance) {
+        waterChartInstance.destroy();
+    } else if (chartId === 'feedIntakeChart' && feedChartInstance) {
+        feedChartInstance.destroy();
+    } else if (chartId === 'mortalityCountChart' && mortalityChartInstance) {
+        mortalityChartInstance.destroy();
+    }
+
+    // Create a new chart instance
+    const newChartInstance = new Chart(ctx, {
+        type: 'bar',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: labelName,
+                backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                borderColor: 'rgba(75, 192, 192, 1)',
+                borderWidth: 1,
+                data: data
+            }, {
+                label: 'Standard ' + labelName,
+                backgroundColor: 'rgba(255, 99, 132, 0.6)',
+                borderColor: 'rgba(255, 99, 132, 1)',
+                borderWidth: 1,
+                data: standardData
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: { beginAtZero: true },
+                y: { beginAtZero: true }
+            }
+        }
+    });
+
+    // Store the new chart instance
+    if (chartId === 'waterConsumptionChart') {
+        waterChartInstance = newChartInstance;
+    } else if (chartId === 'feedIntakeChart') {
+        feedChartInstance = newChartInstance;
+    } else if (chartId === 'mortalityCountChart') {
+        mortalityChartInstance = newChartInstance;
+    }
+}
+
+// Export to Excel
+document.getElementById('exportButton').addEventListener('click', function () {
+    const waterDataExport = waterData.labels.map((label, index) => ({
+        Date: label,
+        "Water Consumption (Liters)": waterData.values[index],
+        "Standard Water Consumption (Liters)": standardWater[index]
+    }));
+
+    const feedDataExport = feedData.labels.map((label, index) => ({
+        Date: label,
+        "Feed Intake (kg)": feedData.values[index],
+        "Standard Feed Intake (kg)": standardFeed[index]
+    }));
+
+    const mortalityDataExport = mortalityData.labels.map((label, index) => ({
+        Date: label,
+        "Mortality Count": mortalityData.values[index]
+    }));
+
+    const combinedData = waterDataExport.map((water, index) => ({
+        ...water,
+        "Feed Intake (kg)": feedDataExport[index]["Feed Intake (kg)"],
+        "Standard Feed Intake (kg)": feedDataExport[index]["Standard Feed Intake (kg)"],
+        "Mortality Count": mortalityDataExport[index]["Mortality Count"]
+    }));
+
+    const worksheet = XLSX.utils.json_to_sheet(combinedData);
+    const workbook = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(workbook, worksheet, "Poultry Data");
+    XLSX.writeFile(workbook, "Poultry_Data.xlsx");
+});
+
+// Initial fetch
+fetchData();
+
+// Event listener for the Enter button
+document.getElementById('enterButton').addEventListener('click', function () {
+    updateChartsAndTables();
+});
+
+// Event listener for the number of chicks input
+document.getElementById('numChicks').addEventListener('input', function () {
+    updateChartsAndTables();
+});
+</script>
+</body>
+</html>
