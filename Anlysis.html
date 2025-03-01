@@ -10,190 +10,256 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.16.9/xlsx.full.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            background-image: linear-gradient(to right, #f0f4ff, #e6eef8);
-            display: flex;
-            flex-direction: column;
-            min-height: 100vh;
-            font-family: 'Arial', sans-serif;
-        }
+<style>
+    /* Global box-sizing to include padding and borders in element width */
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
 
+    body {
+        background-image: linear-gradient(to right, #f0f4ff, #e6eef8);
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+        font-family: 'Arial', sans-serif;
+        overflow-x: hidden; /* Prevent horizontal overflow */
+    }
+
+    header {
+        background-color: #007BFF;
+        color: white;
+        text-align: center;
+        position: fixed;
+        top: 0;
+        width: 100%;
+        z-index: 1000;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+        padding: 20px 0;
+    }
+
+    header h1 {
+        font-size: 2.5rem;
+        margin: 0;
+    }
+
+    .container {
+        display: flex;
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: 20px;
+        padding: 20px;
+        margin-top: 180px; /* Adjusted to accommodate the input container */
+        margin-bottom: 100px;
+        justify-content: space-between;
+        max-width: 100%; /* Ensure container doesn't overflow */
+    }
+
+    .data-box {
+        background-color: #ffffff;
+        border-radius: 12px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        padding: 25px;
+        width: 45%;
+        text-align: center;
+        transition: transform 0.2s;
+        max-width: 100%; /* Ensure data-box doesn't overflow */
+    }
+
+    .data-box:hover {
+        transform: translateY(-5px);
+    }
+
+    .back-button {
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        background-color: #007BFF;
+        color: white;
+        padding: 15px 25px;
+        border-radius: 50px;
+        text-decoration: none;
+        font-size: 1.2rem;
+        z-index: 1000;
+        transition: background-color 0.3s;
+    }
+
+    .back-button:hover {
+        background-color: #0056b3;
+    }
+
+    .table-container {
+        margin-top: 25px;
+        text-align: center;
+        width: 100%;
+        margin-left: auto;
+        margin-right: auto;
+        overflow-x: auto; /* Allow horizontal scrolling for tables */
+    }
+
+    table {
+        width: 90%;
+        border-collapse: collapse;
+        margin-top: 20px;
+        margin-left: auto;
+        margin-right: auto;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        max-width: 100%; /* Ensure table doesn't overflow */
+    }
+
+    th, td {
+        border: 1px solid #ddd;
+        padding: 15px;
+        font-size: 1.2em;
+    }
+
+    th {
+        background-color: #007BFF;
+        color: white;
+        text-align: center;
+    }
+
+    td {
+        text-align: center;
+    }
+
+    .export-button {
+        background-color: #007bff;
+        color: white;
+        border: none;
+        padding: 15px 30px;
+        margin-top: 30px;
+        margin-bottom: 50px;
+        border-radius: 50px;
+        cursor: pointer;
+        font-size: 1.2em;
+        transition: background-color 0.3s;
+        font-weight: bold;
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+        max-width: 100%; /* Ensure button doesn't overflow */
+    }
+
+    .export-button:hover {
+        background-color: #0069d9;
+    }
+
+    .input-container {
+        display: flex;
+        justify-content: center;
+        gap: 10px; /* Reduced gap */
+        margin-top: 0; /* No extra margin needed */
+        flex-wrap: wrap;
+        width: 100%;
+        background-color: #f0f4ff;
+        padding: 8px 0;
+        position: sticky;
+        top: 80px; /* Adjust this value to match your header's height */
+        z-index: 1000; /* Keeps it above other elements */
+        max-width: 100%; /* Ensure input container doesn't overflow */
+    }
+
+    .input-container input {
+        padding: 10px;
+        border-radius: 30px;
+        border: 1px solid #ddd;
+        font-size: 1em;
+        width: 180px;
+        text-align: center;
+        max-width: 100%; /* Ensure input doesn't overflow */
+    }
+
+    .input-container button {
+        padding: 10px 20px;
+        border-radius: 30px;
+        border: none;
+        background-color: #007BFF;
+        color: white;
+        font-size: 1em;
+        cursor: pointer;
+        transition: background-color 0.3s;
+        max-width: 100%; /* Ensure button doesn't overflow */
+    }
+
+    .input-container button:hover {
+        background-color: #0056b3;
+    }
+
+    @media (max-width: 768px) {
+        /* Ensure header is visible and properly spaced */
         header {
-            background-color: #007BFF;
-            color: white;
-            text-align: center;
-            position: fixed;
-            top: 0;
-            width: 100%;
-            z-index: 1000;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-            padding: 20px 0;
+            padding: 10px 5px;
+            position: relative; /* Ensure header stays in the document flow */
+            z-index: 1; /* Bring header above other elements */
         }
 
         header h1 {
-            font-size: 2.5rem;
-            margin: 0;
+            font-size: 1.5rem; /* Smaller text to fit */
+            white-space: normal;
+            word-wrap: break-word;
+            text-align: center;
+            margin: 0; /* Remove default margin */
         }
 
+        /* Fix input-container position and spacing */
+        .input-container {
+            position: relative; /* No fixed/sticky to avoid overlap */
+            top: auto;
+            flex-direction: column; /* Stack inputs in mobile */
+            align-items: center;
+            padding: 10px;
+            width: 100%;
+            margin-top: 10px; /* Add space below the header */
+            background-color: #fff; /* Ensure background is visible */
+            z-index: 1; /* Bring input container above other elements */
+        }
+
+        .input-container input, 
+        .input-container button {
+            width: 90%; /* Full width in mobile */
+            font-size: 1rem;
+            padding: 8px;
+            margin: 5px 0; /* Add spacing between stacked elements */
+        }
+
+        /* Ensure content fits and doesn't overlap */
         .container {
-            display: flex;
-            flex-direction: row;
-            flex-wrap: wrap;
-            gap: 20px;
-            padding: 20px;
-            margin-top: 180px; /* Adjusted to accommodate the input container */
-            margin-bottom: 100px;
-            justify-content: space-between;
+            flex-direction: column;
+            align-items: center;
+            margin-top: 20px; /* Adjust to fit under input-container */
+            padding: 10px; /* Add padding for better spacing */
         }
 
         .data-box {
-            background-color: #ffffff;
-            border-radius: 12px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-            padding: 25px;
-            width: 45%;
-            text-align: center;
-            transition: transform 0.2s;
-        }
-
-        .data-box:hover {
-            transform: translateY(-5px);
-        }
-
-        .back-button {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            background-color: #007BFF;
-            color: white;
-            padding: 15px 25px;
-            border-radius: 50px;
-            text-decoration: none;
-            font-size: 1.2rem;
-            z-index: 1000;
-            transition: background-color 0.3s;
-        }
-
-        .back-button:hover {
-            background-color: #0056b3;
+            width: 95%; /* Take full width in mobile */
+            margin: 10px 0; /* Add spacing between data boxes */
         }
 
         .table-container {
-            margin-top: 25px;
-            text-align: center;
             width: 100%;
-            margin-left: auto;
-            margin-right: auto;
+            overflow-x: auto; /* Prevent table overflow */
+            margin-top: 10px; /* Add spacing above the table */
         }
 
         table {
-            width: 90%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            margin-left: auto;
-            margin-right: auto;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            font-size: 0.9em; /* Reduce size for small screens */
         }
 
         th, td {
-            border: 1px solid #ddd;
-            padding: 15px;
-            font-size: 1.2em;
-        }
-
-        th {
-            background-color: #007BFF;
-            color: white;
-            text-align: center;
-        }
-
-        td {
-            text-align: center;
+            padding: 10px;
         }
 
         .export-button {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 15px 30px;
-            margin-top: 30px;
-            margin-bottom: 50px;
-            border-radius: 50px;
-            cursor: pointer;
-            font-size: 1.2em;
-            transition: background-color 0.3s;
-            font-weight: bold;
-            display: block;
-            margin-left: auto;
-            margin-right: auto;
+            width: 90%;
+            font-size: 1rem;
+            padding: 10px;
+            margin: 10px 0; /* Add spacing around the button */
         }
-
-        .export-button:hover {
-            background-color: #0069d9;
-        }
-
-.input-container {
-    display: flex;
-    justify-content: center;
-    gap: 10px; /* Reduced gap */
-    margin-top: 0; /* No extra margin needed */
-    flex-wrap: wrap;
-    width: 100%;
-    background-color: #f0f4ff;
-    padding: 8px 0;
-    position: sticky;
-    top: 80px; /* Adjust this value to match your header's height */
-    z-index: 1000; /* Keeps it above other elements */
-}
-
-.input-container input {
-    padding: 10px;
-    border-radius: 30px;
-    border: 1px solid #ddd;
-    font-size: 1em;
-    width: 180px;
-    text-align: center;
-}
-
-.input-container button {
-    padding: 10px 20px;
-    border-radius: 30px;
-    border: none;
-    background-color: #007BFF;
-    color: white;
-    font-size: 1em;
-    cursor: pointer;
-    transition: background-color 0.3s;
-}
-
-.input-container button:hover {
-    background-color: #0056b3;
-}
-
-
-        @media (max-width: 768px) {
-            .container {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .data-box {
-                width: 90%;
-            }
-
-            .input-container {
-                flex-direction: column;
-                align-items: center;
-            }
-
-            .input-container input, .input-container button {
-                width: 80%;
-            }
-        }
-    </style>
+    }
+</style>
 </head>
 <body>
 
