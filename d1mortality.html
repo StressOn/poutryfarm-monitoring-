@@ -251,87 +251,71 @@ let waterData = { labels: [], values: [] };
 let feedData = { labels: [], values: [] };
 let mortalityData = { labels: [], values: [] };
 
+
 function fetchData() {
     database.ref('poultryFarmData').once('value').then(snapshot => {
         const data = snapshot.val();
         console.log("Fetched Data:", data); // Debugging
 
         if (data) {
-            let mortalityDataArray = [];
-            let waterDataArray = [];
-            let feedDataArray = [];
-
-            // Convert the data object into an array
-            const dataArray = Object.values(data);
-
-            // Aggregate mortality count, water consumption, and feed intake per day
             const mortalityPerDay = {};
             const waterConsumptionPerDay = {};
             const feedIntakePerDay = {};
 
+            const dataArray = Object.values(data);
+
             dataArray.forEach(entry => {
+                console.log("Processing Entry:", entry); // Debugging
+
                 const date = new Date(entry.timestamp * 1000).toLocaleDateString();
 
-                // Sum up mortality counts for the same day
-                if (!mortalityPerDay[date]) {
-                    mortalityPerDay[date] = 0;
-                }
-                mortalityPerDay[date] += entry.mortalityCount;
+                if (!mortalityPerDay[date]) mortalityPerDay[date] = 0;
+                mortalityPerDay[date] += entry.mortalityCount || 0;
 
-                // Sum up water consumption for the same day
-                if (!waterConsumptionPerDay[date]) {
-                    waterConsumptionPerDay[date] = 0;
-                }
-                waterConsumptionPerDay[date] += Math.round(entry.totalWaterConsumption);
+                if (!waterConsumptionPerDay[date]) waterConsumptionPerDay[date] = 0;
+                waterConsumptionPerDay[date] += parseFloat((entry.totalWaterConsumption || 0).toFixed(2));
 
-                // Sum up feed intake for the same day
-                if (!feedIntakePerDay[date]) {
-                    feedIntakePerDay[date] = 0;
-                }
-                feedIntakePerDay[date] += Math.round(entry.feedIntake);
+                if (!feedIntakePerDay[date]) feedIntakePerDay[date] = 0;
+                feedIntakePerDay[date] += parseFloat((entry.feedIntakeCount || 0).toFixed(2));
             });
 
-            // Prepare data for charts and tables
-            waterData.labels = Object.keys(waterConsumptionPerDay).slice(-10); // Last 10 days
-            waterData.values = Object.values(waterConsumptionPerDay).slice(-10);
+            // Debugging
+            console.log("Mortality Per Day:", mortalityPerDay);
+            console.log("Water Consumption Per Day:", waterConsumptionPerDay);
+            console.log("Feed Intake Per Day:", feedIntakePerDay);
 
-            feedData.labels = Object.keys(feedIntakePerDay).slice(-10); // Last 10 days
-            feedData.values = Object.values(feedIntakePerDay).slice(-10);
+            // Update chart data
+            waterData.labels = Object.keys(waterConsumptionPerDay);
+            waterData.values = Object.values(waterConsumptionPerDay);
+
+            feedData.labels = Object.keys(feedIntakePerDay);
+            feedData.values = Object.values(feedIntakePerDay);
 
             mortalityData.labels = Object.keys(mortalityPerDay);
             mortalityData.values = Object.values(mortalityPerDay);
 
-            console.log("Mortality Data:", mortalityData);
-            console.log("Water Data:", waterData);
-            console.log("Feed Data:", feedData);
+            updateChartsAndTables();
         }
-
-        updateChartsAndTables();
     }).catch(error => {
         console.error("Error fetching data:", error);
     });
 }
 
-// Update charts and tables with filtered data
+
+
+
 function updateChartsAndTables() {
-    // Update Water Consumption Chart
-    createChart('waterConsumptionChart', waterData.labels, waterData.values, 'Water Consumption (Liters)');
-
-    // Update Feed Intake Chart
-    createChart('feedIntakeChart', feedData.labels, feedData.values, 'Feed Intake (kg)');
-
-    // Update Mortality Count Chart
-    createChart('mortalityCountChart', mortalityData.labels, mortalityData.values, 'Mortality Count');
+    // Update charts while destroying old ones
+    waterChart = createChart('waterConsumptionChart', waterData.labels, waterData.values, 'Water Consumption (Liters)', waterChart);
+    feedChart = createChart('feedIntakeChart', feedData.labels, feedData.values, 'Feed Intake (kg)', feedChart);
+    mortalityChart = createChart('mortalityCountChart', mortalityData.labels, mortalityData.values, 'Mortality Count', mortalityChart);
 
     // Update Water Consumption Table
     const waterTableBody = document.querySelector('#waterConsumptionTable tbody');
     waterTableBody.innerHTML = '';
     waterData.labels.forEach((label, index) => {
         const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${label}</td>
-            <td>${waterData.values[index]}</td>
-        `;
+        row.innerHTML = `<td>${label}</td><td>${waterData.values[index]}</td>`;
         waterTableBody.appendChild(row);
     });
 
@@ -340,10 +324,7 @@ function updateChartsAndTables() {
     feedTableBody.innerHTML = '';
     feedData.labels.forEach((label, index) => {
         const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${label}</td>
-            <td>${feedData.values[index]}</td>
-        `;
+        row.innerHTML = `<td>${label}</td><td>${feedData.values[index]}</td>`;
         feedTableBody.appendChild(row);
     });
 
@@ -352,18 +333,23 @@ function updateChartsAndTables() {
     mortalityTableBody.innerHTML = '';
     mortalityData.labels.forEach((label, index) => {
         const row = document.createElement('tr');
-        row.innerHTML = `
-            <td>${label}</td>
-            <td>${mortalityData.values[index]}</td>
-        `;
+        row.innerHTML = `<td>${label}</td><td>${mortalityData.values[index]}</td>`;
         mortalityTableBody.appendChild(row);
     });
 }
 
-// Create a chart
-function createChart(chartId, labels, data, labelName) {
+
+let waterChart, feedChart, mortalityChart;
+
+function createChart(chartId, labels, data, labelName, chartInstance) {
     const ctx = document.getElementById(chartId).getContext('2d');
-    new Chart(ctx, {
+
+    // Destroy previous chart if it exists
+    if (chartInstance) {
+        chartInstance.destroy();
+    }
+
+    return new Chart(ctx, {
         type: 'bar',
         data: {
             labels: labels,
@@ -384,6 +370,8 @@ function createChart(chartId, labels, data, labelName) {
         }
     });
 }
+
+
 
 // Export to Excel
 document.getElementById('exportButton').addEventListener('click', function () {
@@ -416,6 +404,9 @@ document.getElementById('exportButton').addEventListener('click', function () {
 
 // Initial fetch
 fetchData();
+// Auto-refresh data every 10 seconds
+setInterval(fetchData, 10000);
+
 </script>
 </body>
 </html>
