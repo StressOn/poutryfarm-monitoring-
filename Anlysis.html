@@ -44,7 +44,7 @@
             flex-wrap: wrap;
             gap: 20px;
             padding: 20px;
-            margin-top: 100px;
+            margin-top: 180px; /* Adjusted to accommodate the input container */
             margin-bottom: 100px;
             justify-content: space-between;
         }
@@ -139,8 +139,14 @@
             display: flex;
             justify-content: center;
             gap: 20px;
-            margin-top: 30px;
+            margin-top: 100px; /* Adjusted to position below the header */
             flex-wrap: wrap;
+            position: fixed;
+            top: 80px;
+            width: 100%;
+            background-color: #f0f4ff;
+            padding: 10px 0;
+            z-index: 1000;
         }
 
         .input-container input {
@@ -194,6 +200,14 @@
     <h1>Poultry Data Monitoring</h1>
 </header>
 
+<!-- Input Boxes for Date and Number of Chicks -->
+<div class="input-container">
+    <input type="date" id="startDate" placeholder="Chicken Enter Date">
+    <input type="number" id="numChicks" placeholder="Number of Chicks">
+    <input type="number" id="balanceChicks" placeholder="Balance Chicks" readonly>
+    <button id="enterButton">Enter</button>
+</div>
+
 <div class="container">
     <!-- Water Consumption Chart -->
     <div class="data-box">
@@ -212,14 +226,6 @@
         <h2>Mortality Count</h2>
         <canvas id="mortalityCountChart" width="150" height="150"></canvas>
     </div>
-</div>
-
-<!-- Input Boxes for Date and Number of Chicks -->
-<div class="input-container">
-    <input type="date" id="startDate" placeholder="Chicken Enter Date">
-    <input type="number" id="numChicks" placeholder="Number of Chicks">
-    <input type="number" id="balanceChicks" placeholder="Balance Chicks" readonly>
-    <button id="enterButton">Enter</button>
 </div>
 
 <!-- Water Consumption Table -->
@@ -301,15 +307,10 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const database = firebase.database();
 
-// Declare chart instances globally (only once)
-let waterChartInstance = null;
-let feedChartInstance = null;
-let mortalityChartInstance = null;
-
 // Standard values (per chick)
 const standardValues = {
-    water: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80],
-    feed: [2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40, 42, 44, 46, 48, 50, 52, 54, 56, 58, 60, 62, 64, 66, 68, 70, 72, 74, 76, 78, 80]
+    water: [0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 0.45, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 1.2, 2.55, 2.55, 2.55, 2.55, 2.55, 2.55, 2.55, 4.2, 4.2, 4.2, 4.2, 4.2, 4.2, 4.2, 6.3, 6.3, 6.3, 6.3, 6.3, 6.3, 6.3, 8.4, 8.4, 8.4, 8.4, 8.4],
+    feed: [0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.15, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.4, 0.85, 0.85, 0.85, 0.85, 0.85, 0.85, 0.85, 1.4, 1.4, 1.4, 1.4, 1.4, 1.4, 1.4, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.1, 2.8, 2.8, 2.8, 2.8, 2.8]
 };
 
 let waterData = { labels: [], values: [] };
@@ -321,12 +322,12 @@ function createChart(chartId, labels, data, labelName, standardData) {
     const ctx = document.getElementById(chartId).getContext('2d');
 
     // Destroy the existing chart instance if it exists
-    if (chartId === 'waterConsumptionChart' && waterChartInstance) {
-        waterChartInstance.destroy();
-    } else if (chartId === 'feedIntakeChart' && feedChartInstance) {
-        feedChartInstance.destroy();
-    } else if (chartId === 'mortalityCountChart' && mortalityChartInstance) {
-        mortalityChartInstance.destroy();
+    if (chartId === 'waterConsumptionChart' && window.waterChartInstance) {
+        window.waterChartInstance.destroy();
+    } else if (chartId === 'feedIntakeChart' && window.feedChartInstance) {
+        window.feedChartInstance.destroy();
+    } else if (chartId === 'mortalityCountChart' && window.mortalityChartInstance) {
+        window.mortalityChartInstance.destroy();
     }
 
     // Create a new chart instance
@@ -359,52 +360,50 @@ function createChart(chartId, labels, data, labelName, standardData) {
 
     // Store the new chart instance
     if (chartId === 'waterConsumptionChart') {
-        waterChartInstance = newChartInstance;
+        window.waterChartInstance = newChartInstance;
     } else if (chartId === 'feedIntakeChart') {
-        feedChartInstance = newChartInstance;
+        window.feedChartInstance = newChartInstance;
     } else if (chartId === 'mortalityCountChart') {
-        mortalityChartInstance = newChartInstance;
+        window.mortalityChartInstance = newChartInstance;
     }
 }
 
-// Fetch data and update charts
 function fetchData() {
     database.ref('poultryFarmData').once('value').then(snapshot => {
         const data = snapshot.val();
         console.log("Fetched Data:", data); // Debugging
 
         if (data) {
-            // Convert the data object into an array
-            const dataArray = Object.values(data);
-
-            // Aggregate mortality count, water consumption, and feed intake per day
             const mortalityPerDay = {};
             const waterConsumptionPerDay = {};
             const feedIntakePerDay = {};
 
+            const dataArray = Object.values(data);
+
             dataArray.forEach(entry => {
+                console.log("Processing Entry:", entry); // Debugging
+
                 const date = new Date(entry.timestamp * 1000).toLocaleDateString();
 
                 // Sum up mortality counts for the same day
-                if (!mortalityPerDay[date]) {
-                    mortalityPerDay[date] = 0;
-                }
-                mortalityPerDay[date] += entry.mortalityCount;
+                if (!mortalityPerDay[date]) mortalityPerDay[date] = 0;
+                mortalityPerDay[date] += entry.mortalityCount || 0;
 
                 // Sum up water consumption for the same day
-                if (!waterConsumptionPerDay[date]) {
-                    waterConsumptionPerDay[date] = 0;
-                }
-                waterConsumptionPerDay[date] += entry.totalWaterConsumption;
+                if (!waterConsumptionPerDay[date]) waterConsumptionPerDay[date] = 0;
+                waterConsumptionPerDay[date] += parseFloat((entry.totalWaterConsumption || 0).toFixed(2));
 
                 // Sum up feed intake for the same day
-                if (!feedIntakePerDay[date]) {
-                    feedIntakePerDay[date] = 0;
-                }
-                feedIntakePerDay[date] += entry.feedIntake;
+                if (!feedIntakePerDay[date]) feedIntakePerDay[date] = 0;
+                feedIntakePerDay[date] += parseFloat((entry.feedIntakeCount || 0).toFixed(2)); // Use feedIntakeCount
             });
 
-            // Prepare data for charts and tables
+            // Debugging
+            console.log("Mortality Per Day:", mortalityPerDay);
+            console.log("Water Consumption Per Day:", waterConsumptionPerDay);
+            console.log("Feed Intake Per Day:", feedIntakePerDay);
+
+            // Update chart data
             waterData.labels = Object.keys(waterConsumptionPerDay);
             waterData.values = Object.values(waterConsumptionPerDay);
 
@@ -414,19 +413,12 @@ function fetchData() {
             mortalityData.labels = Object.keys(mortalityPerDay);
             mortalityData.values = Object.values(mortalityPerDay);
 
-            console.log("Mortality Data:", mortalityData);
-            console.log("Water Data:", waterData);
-            console.log("Feed Data:", feedData);
+            updateChartsAndTables();
         }
-
-        updateChartsAndTables();
     }).catch(error => {
         console.error("Error fetching data:", error);
     });
 }
-
-
-
 
 
 
@@ -450,6 +442,7 @@ function updateChartsAndTables() {
     // Get the start date
     const startDate = document.getElementById('startDate').value;
     if (!startDate) {
+        alert("Please select a start date.");
         return;
     }
 
@@ -457,7 +450,8 @@ function updateChartsAndTables() {
 
     // Get the number of chicks
     const numChicks = document.getElementById('numChicks').value;
-    if (!numChicks) {
+    if (!numChicks || numChicks <= 0) {
+        alert("Please enter a valid number of chicks.");
         return;
     }
 
@@ -502,8 +496,8 @@ function updateChartsAndTables() {
 
     // Calculate standard water and feed consumption
     const days = allDates.map((label, index) => index + 1); // Days since startDate
-    const standardWater = days.map(day => standardValues.water[day - 1]); // Standard per chick
-    const standardFeed = days.map(day => standardValues.feed[day - 1]); // Standard per chick
+    const standardWater = days.map(day => standardValues.water[day - 1] || 0); // Standard per chick
+    const standardFeed = days.map(day => standardValues.feed[day - 1] || 0); // Standard per chick
 
     // Update Water Consumption Chart
     createChart('waterConsumptionChart', filteredWaterData.labels, filteredWaterData.values, 'Water Consumption (Liters)', standardWater);
@@ -558,9 +552,6 @@ function updateChartsAndTables() {
     document.getElementById('balanceChicks').value = balanceChicks;
 }
 
-
-
-
 // Initial fetch
 fetchData();
 
@@ -574,70 +565,18 @@ document.getElementById('numChicks').addEventListener('input', function () {
     updateChartsAndTables();
 });
 
-
-// Function to create or update a chart
-function createChart(chartId, labels, data, labelName, standardData) {
-    const ctx = document.getElementById(chartId).getContext('2d');
-
-    // Destroy the existing chart instance if it exists
-    if (chartId === 'waterConsumptionChart' && waterChartInstance) {
-        waterChartInstance.destroy();
-    } else if (chartId === 'feedIntakeChart' && feedChartInstance) {
-        feedChartInstance.destroy();
-    } else if (chartId === 'mortalityCountChart' && mortalityChartInstance) {
-        mortalityChartInstance.destroy();
-    }
-
-    // Create a new chart instance
-    const newChartInstance = new Chart(ctx, {
-        type: 'bar',
-        data: {
-            labels: labels,
-            datasets: [{
-                label: labelName,
-                backgroundColor: 'rgba(75, 192, 192, 0.6)',
-                borderColor: 'rgba(75, 192, 192, 1)',
-                borderWidth: 1,
-                data: data
-            }, {
-                label: 'Standard ' + labelName,
-                backgroundColor: 'rgba(255, 99, 132, 0.6)',
-                borderColor: 'rgba(255, 99, 132, 1)',
-                borderWidth: 1,
-                data: standardData
-            }]
-        },
-        options: {
-            responsive: true,
-            scales: {
-                x: { beginAtZero: true },
-                y: { beginAtZero: true }
-            }
-        }
-    });
-
-    // Store the new chart instance
-    if (chartId === 'waterConsumptionChart') {
-        waterChartInstance = newChartInstance;
-    } else if (chartId === 'feedIntakeChart') {
-        feedChartInstance = newChartInstance;
-    } else if (chartId === 'mortalityCountChart') {
-        mortalityChartInstance = newChartInstance;
-    }
-}
-
 // Export to Excel
 document.getElementById('exportButton').addEventListener('click', function () {
     const waterDataExport = waterData.labels.map((label, index) => ({
         Date: label,
         "Water Consumption (Liters)": waterData.values[index],
-        "Standard Water Consumption (Liters)": standardWater[index]
+        "Standard Water Consumption (Liters)": standardValues.water[index] || 0
     }));
 
     const feedDataExport = feedData.labels.map((label, index) => ({
         Date: label,
         "Feed Intake (kg)": feedData.values[index],
-        "Standard Feed Intake (kg)": standardFeed[index]
+        "Standard Feed Intake (kg)": standardValues.feed[index] || 0
     }));
 
     const mortalityDataExport = mortalityData.labels.map((label, index) => ({
@@ -656,19 +595,6 @@ document.getElementById('exportButton').addEventListener('click', function () {
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Poultry Data");
     XLSX.writeFile(workbook, "Poultry_Data.xlsx");
-});
-
-// Initial fetch
-fetchData();
-
-// Event listener for the Enter button
-document.getElementById('enterButton').addEventListener('click', function () {
-    updateChartsAndTables();
-});
-
-// Event listener for the number of chicks input
-document.getElementById('numChicks').addEventListener('input', function () {
-    updateChartsAndTables();
 });
 </script>
 </body>
