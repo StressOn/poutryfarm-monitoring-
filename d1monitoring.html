@@ -465,78 +465,65 @@ var flowRateDial = new JustGage({
             });
         }
 
-        // Function to monitor data from Firebase
-        function monitorData() {
-            var sensorRef = database.ref('poultryFarmData');
-            sensorRef.on('value', function(snapshot) {
-                var temperatureData = [];
-                var humidityData = [];
-                var flowRateData = [];
-                var timeLabels = [];
-                var latestTimestamp = null;
-
-                if (!snapshot.exists()) {
-                    // No data available, set default values
-                    document.getElementById("liveTemperature").innerText = "N/A";
-                    document.getElementById("liveHumidity").innerText = "N/A";
-                    document.getElementById("liveFlowRate").innerText = "N/A";
-                    document.getElementById("lastUpdateDisplay").innerText = "N/A";
-                    document.getElementById("latestDate").innerText = "N/A";
-                    return;
-                }
-
-                snapshot.forEach(function(childSnapshot) {
-                    var data = childSnapshot.val();
-                    if (!data.timestamp) return; // Skip if timestamp is missing
-
-                    var timestamp = new Date(data.timestamp * 1000); // Convert to date
-
-                    var hours = timestamp.getHours();
-                    var minutes = timestamp.getMinutes();
-                    var ampm = hours >= 12 ? "PM" : "AM";
-                    hours = hours % 12 || 12; // Convert 24-hour time to 12-hour format
-                    minutes = minutes < 10 ? "0" + minutes : minutes; // Ensure two-digit minutes
-                    var formattedTime = `${hours}:${minutes} ${ampm}`; // Final time format
-
-                    var dateString = timestamp.toLocaleDateString(); // Format date
-
-                    if (data.temperature !== undefined) temperatureData.push(data.temperature);
-                    if (data.humidity !== undefined) humidityData.push(data.humidity);
-                    if (data.flowRate !== undefined) flowRateData.push(data.flowRate);
-                    timeLabels.push(formattedTime);
-
-                    // Update live values with fallback
-                    document.getElementById("liveTemperature").innerText = data.temperature !== undefined ? data.temperature : "N/A";
-                    document.getElementById("liveHumidity").innerText = data.humidity !== undefined ? data.humidity : "N/A";
-                    document.getElementById("liveFlowRate").innerText = data.flowRate !== undefined ? data.flowRate : "N/A";
-
-                    // Update dial indicators
-                    temperatureDial.refresh(data.temperature || 0);
-                    humidityDial.refresh(data.humidity || 0);
-                    flowRateDial.refresh(data.flowRate || 0);
-
-                    // Update latest timestamp only if it's the most recent
-                    if (!latestTimestamp || timestamp > latestTimestamp) {
-                        latestTimestamp = timestamp;
-                    }
-                });
-
-                // Update charts
-                updateChart(temperatureChart, timeLabels, temperatureData);
-                updateChart(humidityChart, timeLabels, humidityData);
-                updateChart(flowRateChart, timeLabels, flowRateData);
-
-                // Display last update time and formatted date with time
-                if (latestTimestamp) {
-                    var hoursAgo = Math.floor((Date.now() - latestTimestamp) / (1000 * 60 * 60));
-                    document.getElementById("lastUpdateDisplay").innerText = hoursAgo + " hours ago";
-                    document.getElementById("latestDate").innerText = `Date: ${latestTimestamp.toLocaleDateString()} | Time: ${latestTimestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}`;
-                } else {
-                    document.getElementById("lastUpdateDisplay").innerText = "N/A";
-                    document.getElementById("latestDate").innerText = "N/A";
-                }
-            });
+function monitorData() {
+    var sensorRef = database.ref('poultryFarmData').limitToLast(100); // Limit data fetched
+    sensorRef.on('value', function(snapshot) {
+        if (!snapshot.exists()) {
+            // Handle no data case
+            return;
         }
+
+        var data = Object.values(snapshot.val()); // Convert to array for easier processing
+        var temperatureData = [];
+        var humidityData = [];
+        var flowRateData = [];
+        var timeLabels = [];
+        var latestTimestamp = null;
+
+        data.forEach(function(item) {
+            if (!item.timestamp) return;
+
+            var timestamp = new Date(item.timestamp * 1000);
+            var formattedTime = timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true });
+            var dateString = timestamp.toLocaleDateString();
+
+            temperatureData.push(item.temperature || 0);
+            humidityData.push(item.humidity || 0);
+            flowRateData.push(item.flowRate || 0);
+            timeLabels.push(formattedTime);
+
+            // Update live values
+            document.getElementById("liveTemperature").innerText = item.temperature || "N/A";
+            document.getElementById("liveHumidity").innerText = item.humidity || "N/A";
+            document.getElementById("liveFlowRate").innerText = item.flowRate || "N/A";
+
+            // Update dials
+            temperatureDial.refresh(item.temperature || 0);
+            humidityDial.refresh(item.humidity || 0);
+            flowRateDial.refresh(item.flowRate || 0);
+
+            // Track latest timestamp
+            if (!latestTimestamp || timestamp > latestTimestamp) {
+                latestTimestamp = timestamp;
+            }
+        });
+
+        // Update charts
+        updateChart(temperatureChart, timeLabels, temperatureData);
+        updateChart(humidityChart, timeLabels, humidityData);
+        updateChart(flowRateChart, timeLabels, flowRateData);
+
+        // Display last update time
+        if (latestTimestamp) {
+            var hoursAgo = Math.floor((Date.now() - latestTimestamp) / (1000 * 60 * 60));
+            document.getElementById("lastUpdateDisplay").innerText = hoursAgo + " hours ago";
+            document.getElementById("latestDate").innerText = `Date: ${latestTimestamp.toLocaleDateString()} | Time: ${latestTimestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: true })}`;
+        } else {
+            document.getElementById("lastUpdateDisplay").innerText = "N/A";
+            document.getElementById("latestDate").innerText = "N/A";
+        }
+    });
+}
 
         // Function to update a chart
         function updateChart(chart, labels, data) {
@@ -653,7 +640,7 @@ var flowRateDial = new JustGage({
         monitorData();
         initializeCalendar();
 	setInterval(monitorData, 10000);
-	    document.addEventListener("contextmenu", function (e) {
+document.addEventListener("contextmenu", function (e) {
     e.preventDefault(); // Disable right-click menu
 });
 
@@ -677,6 +664,28 @@ document.addEventListener("keydown", function (e) {
         e.preventDefault();
     }
 });
+let logoutTimer;
+
+// Function to reset the logout timer
+function resetTimer() {
+    clearTimeout(logoutTimer); // Clear any existing timer
+    logoutTimer = setTimeout(logoutUser, 60000); // Set new timer for 1 min (60000 ms)
+}
+
+// Function to log out the user
+function logoutUser() {
+    localStorage.setItem("loggedIn", "false"); // Reset login flag
+    window.location.href = "index.html"; // Redirect to login page
+}
+
+// Event listeners for user activity
+document.addEventListener("mousemove", resetTimer);
+document.addEventListener("keypress", resetTimer);
+document.addEventListener("touchstart", resetTimer); // For mobile touchscreens
+document.addEventListener("click", resetTimer);
+
+// Start the timer when the page loads
+resetTimer();
 
     </script>
 </body>
